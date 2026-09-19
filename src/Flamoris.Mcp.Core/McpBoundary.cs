@@ -20,6 +20,7 @@ public sealed class McpBoundary : IDisposable
         options.Validate();
         this.host = host; Options = options; Diagnostics = diagnostics;
         var registry = tools.ToDictionary(t => t.Name, StringComparer.Ordinal);
+        if (registry.ContainsKey("mcp.context")) throw new ArgumentException("Reserved tool name.");
         if (registry.Count > 512) throw new ArgumentException("Too many tools.");
         Tools = new System.Collections.ObjectModel.ReadOnlyDictionary<string, HostTool>(registry);
         admission = new(options.MaxConcurrentRequests);
@@ -65,6 +66,26 @@ public sealed class McpBoundary : IDisposable
     }
     internal bool Owns(CapabilityGrant attachment)
     { lock (lifecycle) return ReferenceEquals(grant, attachment) && attachment.IsActive; }
+
+    internal Task<JsonElement> ContextAsync(CapabilityGrant attachment, CancellationToken token) =>
+        host.InvokeAsync(() =>
+        {
+            lock (attachment.Gate)
+            {
+                attachment.Demand(); token.ThrowIfCancellationRequested();
+                var snapshot = host.Snapshot;
+                if (!snapshot.Available) throw new McpFault(McpErrors.HostUnavailable);
+                if (snapshot.RuntimeId != attachment.Snapshot.RuntimeId) throw new McpFault(McpErrors.StaleSession);
+                if (snapshot.DocumentToken != attachment.Snapshot.DocumentToken) throw new McpFault(McpErrors.StaleDocument);
+                return JsonSerializer.SerializeToElement(new {
+                    productId = snapshot.ProductId, applicationVersion = snapshot.ApplicationVersion,
+                    runtimeId = snapshot.RuntimeId, documentToken = snapshot.DocumentToken,
+                    revision = snapshot.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    available = snapshot.Available, busy = snapshot.HumanEditing,
+                    permission = attachment.Permission == McpPermission.Edit ? "edit" : "readOnly",
+                });
+            }
+        }, token);
 
     public async Task<McpResult> InvokeAsync(CapabilityGrant attachment, string toolName,
         JsonElement input, RequestGuard? guard, CancellationToken cancellationToken = default)

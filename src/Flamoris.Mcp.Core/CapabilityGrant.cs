@@ -21,8 +21,9 @@ public sealed class CapabilityGrant : IDisposable
     public bool Authenticate(string? credential)
     {
         if (credential is not { Length: 64 }) return false;
-        Span<byte> supplied = stackalloc byte[32];
-        if (!Convert.TryFromHexString(credential, supplied, out int written) || written != 32) return false;
+        byte[] supplied;
+        try { supplied = Convert.FromHexString(credential); }
+        catch (FormatException) { return false; }
         lock (Gate) return active && CryptographicOperations.FixedTimeEquals(secret, supplied);
     }
     internal void Demand()
