@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><Description>Local MCP access infrastructure; applications retain editing authority.</Description></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Flamoris.Logging" Version="1.0.0" />
+    <PackageReference Include="ModelContextProtocol.Core" Version="2.2.0" />
+  </ItemGroup>
+</Project>
