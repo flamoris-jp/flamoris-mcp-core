@@ -5,7 +5,7 @@ FLAMORIS applications should consume MCP Core as a NuGet package. Do not vendor 
 ## Package
 
 - Package ID: `Flamoris.Mcp.Core`
-- Stable version: `1.0.0`
+- Stable version: `1.0.1`
 - Target framework: `.NET 10`
 - Feed: `https://nuget.pkg.github.com/flamoris-jp/index.json`
 
@@ -34,7 +34,7 @@ Then reference the stable package:
 
 ~~~xml
 <ItemGroup>
-  <PackageReference Include="Flamoris.Mcp.Core" Version="1.0.0" />
+  <PackageReference Include="Flamoris.Mcp.Core" Version="1.0.1" />
 </ItemGroup>
 ~~~
 
@@ -80,7 +80,7 @@ Publishing is tag-driven.
 
 1. Update `<Version>` in `Directory.Build.props`.
 2. Merge the reviewed release change to `main`.
-3. Create the exact matching tag, for example `v1.0.0`.
+3. Create the exact matching tag, for example `v1.0.1`.
 4. The publish workflow verifies that the tag belongs to reviewed `main` history and matches the package version.
 5. The workflow restores, builds, produces the self-contained bridge, runs the official-client transport tests, performs deterministic/package smoke checks, packs `Flamoris.Mcp.Core`, and pushes the package to GitHub Packages.
 

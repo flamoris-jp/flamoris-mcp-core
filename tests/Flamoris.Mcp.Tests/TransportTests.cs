@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Channels;
 using Flamoris.Mcp.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModelContextProtocol.Client;
@@ -90,7 +91,7 @@ public sealed class TransportTests
     [TestMethod]
     public async Task ReadOnlyCannotInvokeHiddenMutationAndStopRevokesConnection()
     {
-        var host = new HostHarness(); using var core = host.Boundary();
+        var host = new HostHarness(); using var core = host.Boundary(new() { ReadTimeoutMs = 100 });
         using var grant = await core.EnableAsync(McpPermission.ReadOnly);
         using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var serving = new LocalMcpEndpoint(core).RunAsync(grant, lifetime.Token);
@@ -103,11 +104,34 @@ public sealed class TransportTests
         }, cancellationToken: lifetime.Token);
         Assert.IsTrue(denied.IsError == true);
         StringAssert.Contains(denied.StructuredContent!.Value.GetRawText(), McpErrors.Forbidden);
+        await Task.Delay(300);
+        Assert.IsFalse(client.Completion.IsCompleted, "Grant must remain connected while idle.");
         core.Disable();
         await serving.WaitAsync(TimeSpan.FromSeconds(5));
         await client.Completion.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.AreEqual(0, host.Commits);
         Assert.IsFalse(core.Status.Current.IsGreen);
+    }
+
+    [TestMethod]
+    public async Task HostShutdownStopsAuthenticatedIdleConnection()
+    {
+        var host = new HostHarness();
+        using var core = host.Boundary(new() { ReadTimeoutMs = 100 });
+        using var grant = await core.EnableAsync(McpPermission.Edit);
+        using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var serving = new LocalMcpEndpoint(core).RunAsync(grant, lifetime.Token);
+        await using var client = await McpClient.CreateAsync(Transport(core, grant.ExportCredential()),
+            cancellationToken: lifetime.Token);
+
+        try
+        {
+            await Task.Delay(300);
+            Assert.IsFalse(client.Completion.IsCompleted, "Host connection must remain usable while idle.");
+            Assert.IsFalse((await client.CallToolAsync("mcp.context", cancellationToken: lifetime.Token)).IsError == true);
+        }
+        finally { lifetime.Cancel(); await serving.WaitAsync(TimeSpan.FromSeconds(5)); }
+        await client.Completion.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [TestMethod]
@@ -164,6 +188,70 @@ public sealed class TransportTests
     }
 
     [TestMethod]
+    public async Task ProtocolReadRemainsUsableAfterIdleBeyondFrameTimeout()
+    {
+        using var transport = new ControlledReadStream();
+        using var lease = new CancellationTokenSource();
+        await using var bounded = new BoundedProtocolStream(transport, lease.Token,
+            new() { ReadTimeoutMs = 100 });
+        byte[] buffer = new byte[1024];
+
+        Task<int> read = bounded.ReadAsync(buffer).AsTask();
+        await Task.Delay(300);
+        Assert.IsFalse(read.IsCompleted, "An idle connection must not consume the partial-frame deadline.");
+
+        transport.Enqueue("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}\n");
+        int count = await read.WaitAsync(TimeSpan.FromSeconds(1));
+        StringAssert.Contains(Encoding.UTF8.GetString(buffer, 0, count), "\"method\":\"ping\"");
+    }
+
+    [TestMethod]
+    public async Task StartedPartialFrameStillTimesOut()
+    {
+        using var transport = new ControlledReadStream();
+        using var lease = new CancellationTokenSource();
+        await using var bounded = new BoundedProtocolStream(transport, lease.Token,
+            new() { ReadTimeoutMs = 100 });
+        byte[] buffer = new byte[1024];
+
+        transport.Enqueue("{\"jsonrpc\":");
+        Task<int> read = bounded.ReadAsync(buffer).AsTask();
+        await AssertCancelledAsync(read, "A started partial frame must retain a deterministic deadline.");
+    }
+
+    [TestMethod]
+    public async Task IdleProtocolReadIsCancelledPromptlyByLeaseEnd()
+    {
+        using var transport = new ControlledReadStream();
+        using var stop = new CancellationTokenSource();
+        await using var bounded = new BoundedProtocolStream(transport, stop.Token,
+            new() { ReadTimeoutMs = 100 });
+        Task<int> read = bounded.ReadAsync(new byte[1024]).AsTask();
+        await Task.Delay(300);
+        Assert.IsFalse(read.IsCompleted, "Idle read ended before lease cancellation.");
+
+        stop.Cancel();
+        await AssertCancelledAsync(read, "Idle read did not stop promptly when the lease ended.");
+    }
+
+    [TestMethod]
+    public async Task StdioPumpRemainsAliveWhileClientIsIdle()
+    {
+        using var input = new ControlledReadStream();
+        using var output = new MemoryStream();
+        using var stop = new CancellationTokenSource();
+        Task pumping = StdioBridge.PumpAsync(input, output, new() { ReadTimeoutMs = 100 }, stop.Token);
+
+        await Task.Delay(300);
+        Assert.IsFalse(pumping.IsCompleted, "The stdio bridge must not treat idle as a read timeout.");
+
+        input.Enqueue("ping\n");
+        input.Complete();
+        await pumping.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.AreEqual("ping\n", Encoding.UTF8.GetString(output.ToArray()));
+    }
+
+    [TestMethod]
     public void NamedPipeAddressCannotEscapeLocalNamespace()
     {
         foreach (string name in new[] { @"\\remote\pipe\test", "../flamoris-x", "flamoris-/x", "" })
@@ -185,5 +273,61 @@ public sealed class TransportTests
         await new LocalMcpEndpoint(core).RunAsync(grant).WaitAsync(TimeSpan.FromSeconds(5));
         Assert.IsFalse(core.Status.Current.IsGreen);
         Assert.AreEqual(McpErrors.TransportUnavailable, core.Status.Current.LastError);
+    }
+
+    private static async Task AssertCancelledAsync(Task task, string message)
+    {
+        try
+        {
+            await task.WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.Fail(message);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private sealed class ControlledReadStream : Stream
+    {
+        private readonly Channel<byte[]> chunks = Channel.CreateUnbounded<byte[]>();
+        private byte[] current = [];
+        private int currentOffset;
+
+        public void Enqueue(string value) =>
+            chunks.Writer.TryWrite(Encoding.UTF8.GetBytes(value));
+
+        public void Complete() => chunks.Writer.TryComplete();
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            while (currentOffset == current.Length)
+            {
+                if (!await chunks.Reader.WaitToReadAsync(cancellationToken)) return 0;
+                if (!chunks.Reader.TryRead(out var next)) continue;
+                current = next;
+                currentOffset = 0;
+            }
+
+            int count = Math.Min(buffer.Length, current.Length - currentOffset);
+            current.AsMemory(currentOffset, count).CopyTo(buffer);
+            currentOffset += count;
+            return count;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) Complete();
+            base.Dispose(disposing);
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

@@ -39,14 +39,13 @@ public static class StdioBridge
         catch (Exception e) when (e is OperationCanceledException or TimeoutException or IOException or ObjectDisposedException) { }
         if (first.IsFaulted) throw new McpFault(McpErrors.TransportUnavailable);
     }
-    private static async Task PumpAsync(Stream input, Stream output, McpOptions options, CancellationToken token)
+    internal static async Task PumpAsync(Stream input, Stream output, McpOptions options, CancellationToken token)
     {
         var reader = new BoundedLineReader(input, options.MaxRequestBytes);
         while (!token.IsCancellationRequested)
         {
-            using var read = CancellationTokenSource.CreateLinkedTokenSource(token);
-            read.CancelAfter(options.ReadTimeoutMs);
-            var frame = await reader.ReadAsync(read.Token);
+            var frame = await reader.ReadFrameAsync(
+                TimeSpan.FromMilliseconds(options.ReadTimeoutMs), token);
             if (frame.Status == McpFrameStatus.EndOfStream) return;
             if (frame.Status != McpFrameStatus.Success) throw new McpFault(McpErrors.InvalidRequest);
             using var write = CancellationTokenSource.CreateLinkedTokenSource(token);
