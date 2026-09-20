@@ -47,10 +47,10 @@ The bridge and Core never load a project or create an editor session.
   forwards bounded stdio frames to the explicitly selected running host.
 - `assets/runtime`: canonical red/green status images and Chipsy activity sheet.
 
-Stable package: `Flamoris.Mcp.Core 1.0.0` from the FLAMORIS GitHub Packages feed.
+Stable package: `Flamoris.Mcp.Core 1.0.1` from the FLAMORIS GitHub Packages feed.
 
 ~~~xml
-<PackageReference Include="Flamoris.Mcp.Core" Version="1.0.0" />
+<PackageReference Include="Flamoris.Mcp.Core" Version="1.0.1" />
 ~~~
 
 Core references `Flamoris.Logging` 1.0.0 through NuGet. It does not vendor the DLL.
@@ -77,9 +77,13 @@ and [security](docs/security.md). Consumer migrations remain separate PRs.
 
 Hosts persist their own non-secret preferences using `mcp.enabled`,
 `mcp.permission`, `mcp.transport`, `mcp.pipeName`, `mcp.requestTimeoutMs`,
-`mcp.maxRequestBytes`, `mcp.maxConcurrentRequests`,
+`mcp.readTimeoutMs`, `mcp.maxRequestBytes`, `mcp.maxConcurrentRequests`,
 `mcp.showConnectionStatus`, and `mcp.showActivityCursor`.
 Capabilities are runtime credentials and are never ordinary settings.
+
+`mcp.readTimeoutMs` bounds a frame that has started but stops making progress. It
+is not an idle-session timeout; a healthy local connection may wait indefinitely
+for its next request and is still interrupted immediately by revocation or shutdown.
 
 The common transport value is `stdioBridge`; it denotes stdio plus the local
 named-pipe attachment, not a bridge-owned editing process.
