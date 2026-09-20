@@ -149,7 +149,8 @@ public sealed class TransportTests
     {
         const int notificationCount = 256;
         string notifications = string.Concat(Enumerable.Range(0, notificationCount).Select(i =>
-            $$"""{"jsonrpc":"2.0","method":"notifications/progress","params":{"progress":{{i}}}}""" + "\n"));
+            JsonSerializer.Serialize(new { jsonrpc = "2.0", method = "notifications/progress",
+                @params = new { progress = i } }) + "\n"));
         using var transport = new MemoryStream(Encoding.UTF8.GetBytes(notifications));
         using var lease = new CancellationTokenSource();
         await using var bounded = new BoundedProtocolStream(transport, lease.Token, new());
