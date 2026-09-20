@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/Flamoris.Mcp.Core/Flamoris.Mcp.Core.csproj" />
+  <Project Path="src/Flamoris.Mcp.Bridge/Flamoris.Mcp.Bridge.csproj" />
+  <Project Path="tests/Flamoris.Mcp.Tests/Flamoris.Mcp.Tests.csproj" />
+</Solution>

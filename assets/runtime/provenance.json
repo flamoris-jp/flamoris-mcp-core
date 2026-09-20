@@ -1,0 +1,47 @@
+{
+  "mcp-status-green_16.png": {
+    "sha256": "e8844d388622c61d772dd7575efdcb71f7097876f686a4770b1047c2feb9dab3",
+    "sourceArchive": "mcp-status(1).zip",
+    "sourceEntry": "mcp-status/mcp-status-green_16.png"
+  },
+  "mcp-status-green_20.png": {
+    "sha256": "9abe587b70950ca8dbfaf37ef20805629256a309ce9f1e0e66fe7861da2c7980",
+    "sourceArchive": "mcp-status(1).zip",
+    "sourceEntry": "mcp-status/mcp-status-green_20.png"
+  },
+  "mcp-status-green_24.png": {
+    "sha256": "63f797a97b06453c93d93c1e934346a3c8445dbc36c0dc5bc8cb856fe43d5530",
+    "sourceArchive": "mcp-status(1).zip",
+    "sourceEntry": "mcp-status/mcp-status-green_24.png"
+  },
+  "mcp-status-green_32.png": {
+    "sha256": "94327ddce7922d82b4bcabca543ff62a9a1ffdffc0bfd03ea05c924082ef81b9",
+    "sourceArchive": "mcp-status(1).zip",
+    "sourceEntry": "mcp-status/mcp-status-green_32.png"
+  },
+  "mcp-status-red_16.png": {
+    "sha256": "cd50122548157d1389d0e684936eec7dff6e1b5f896d4cf282439d9c3234d73e",
+    "sourceArchive": "mcp-status(1).zip",
+    "sourceEntry": "mcp-status/mcp-status-red_16.png"
+  },
+  "mcp-status-red_20.png": {
+    "sha256": "bed4807ccf76c41027b3a972f100ca355f098c5b2a55b0037322827578cbd370",
+    "sourceArchive": "mcp-status(1).zip",
+    "sourceEntry": "mcp-status/mcp-status-red_20.png"
+  },
+  "mcp-status-red_24.png": {
+    "sha256": "94d599f9560ca9481bc270c9f85bfd66a42b7866e4e4ebda08b74c1f2d19f81d",
+    "sourceArchive": "mcp-status(1).zip",
+    "sourceEntry": "mcp-status/mcp-status-red_24.png"
+  },
+  "mcp-status-red_32.png": {
+    "sha256": "2ac55b99c3932052637c4eff8fe25dc3cd75e0f64f75917015cc713910121b14",
+    "sourceArchive": "mcp-status(1).zip",
+    "sourceEntry": "mcp-status/mcp-status-red_32.png"
+  },
+  "chipsy-activity.webp": {
+    "sha256": "7c95525039bff56cf66afb082fe1bd00a396f28360a5309142ecc54436a9393e",
+    "sourceArchive": "chipsy-pet-v2.zip",
+    "sourceEntry": "spritesheet.webp"
+  }
+}

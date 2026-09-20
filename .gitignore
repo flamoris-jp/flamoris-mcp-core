@@ -3,5 +3,6 @@
 .vs/
 TestResults/
 artifacts/
+logs/
 *.user
 *.suo
