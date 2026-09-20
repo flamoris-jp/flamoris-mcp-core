@@ -1,6 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><Description>Local MCP access infrastructure; applications retain editing authority.</Description></PropertyGroup>
+  <PropertyGroup>
+    <Description>Local MCP access infrastructure; applications retain editing authority.</Description>
+    <PackageId>Flamoris.Mcp.Core</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>flamoris;mcp;model-context-protocol;desktop;local-security</PackageTags>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
   <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
     <None Include="../../assets/runtime/*" Pack="true" PackagePath="assets/runtime/" />
     <None Include="../../assets/README.md" Pack="true" PackagePath="assets/" />
     <PackageReference Include="Flamoris.Logging" Version="1.0.0" />
