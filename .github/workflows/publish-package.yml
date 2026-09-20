@@ -57,7 +57,7 @@ jobs:
         run: dotnet build Flamoris.Mcp.slnx --configuration Release --no-restore
 
       - name: Publish self-contained bridge
-        run: dotnet publish src/Flamoris.Mcp.Bridge --configuration Release --runtime win-x64 --self-contained true --no-restore --output artifacts/bridge
+        run: dotnet publish src/Flamoris.Mcp.Bridge --configuration Release --runtime win-x64 --self-contained true --output artifacts/bridge
 
       - name: Test through published bridge
         shell: pwsh
