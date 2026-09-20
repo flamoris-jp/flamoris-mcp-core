@@ -28,37 +28,65 @@ public sealed class BoundedLineReader
         buffer = new byte[bufferSize];
     }
 
-    public async ValueTask<McpFrameReadResult> ReadAsync(CancellationToken token = default)
+    public ValueTask<McpFrameReadResult> ReadAsync(CancellationToken token = default) =>
+        ReadCoreAsync(frameTimeout: null, token);
+
+    // Idle time before the first byte is intentionally unbounded. Once a frame has
+    // started, the single deadline covers the rest of that frame and is not reset by
+    // a client that trickles bytes.
+    internal ValueTask<McpFrameReadResult> ReadFrameAsync(TimeSpan frameTimeout,
+        CancellationToken token = default)
+    {
+        if (frameTimeout <= TimeSpan.Zero && frameTimeout != Timeout.InfiniteTimeSpan)
+            throw new ArgumentOutOfRangeException(nameof(frameTimeout));
+        return ReadCoreAsync(frameTimeout, token);
+    }
+
+    private async ValueTask<McpFrameReadResult> ReadCoreAsync(TimeSpan? frameTimeout,
+        CancellationToken token)
     {
         using var frame = new MemoryStream(Math.Min(maximumBytes, buffer.Length));
-        while (true)
+        CancellationTokenSource? deadline = null;
+        try
         {
-            if (count == 0)
+            while (true)
             {
-                offset = 0;
-                count = await stream.ReadAsync(buffer.AsMemory(), token);
                 if (count == 0)
-                    return frame.Length == 0
-                        ? new(McpFrameStatus.EndOfStream)
-                        : new(McpFrameStatus.Truncated);
+                {
+                    offset = 0;
+                    count = await stream.ReadAsync(buffer.AsMemory(), deadline?.Token ?? token);
+                    if (count == 0)
+                        return frame.Length == 0
+                            ? new(McpFrameStatus.EndOfStream)
+                            : new(McpFrameStatus.Truncated);
+                }
+
+                int newline = Array.IndexOf(buffer, (byte)'\n', offset, count);
+                int length = newline >= 0 ? newline - offset : count;
+                if (frame.Length + length > maximumBytes)
+                    return new(McpFrameStatus.Oversized);
+                frame.Write(buffer, offset, length);
+                offset += length;
+                count -= length;
+
+                if (newline >= 0)
+                {
+                    offset++;
+                    count--;
+                    var bytes = frame.GetBuffer().AsSpan(0, checked((int)frame.Length));
+                    if (!bytes.IsEmpty && bytes[^1] == '\r') bytes = bytes[..^1];
+                    try { return new(McpFrameStatus.Success, StrictUtf8.GetString(bytes)); }
+                    catch (DecoderFallbackException) { return new(McpFrameStatus.InvalidUtf8); }
+                }
+
+                if (deadline is null && frameTimeout is { } timeout)
+                {
+                    deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    deadline.CancelAfter(timeout);
+                }
             }
-
-            int newline = Array.IndexOf(buffer, (byte)'\n', offset, count);
-            int length = newline >= 0 ? newline - offset : count;
-            if (frame.Length + length > maximumBytes)
-                return new(McpFrameStatus.Oversized);
-            frame.Write(buffer, offset, length);
-            offset += length;
-            count -= length;
-
-            if (newline < 0) continue;
-            offset++;
-            count--;
-            var bytes = frame.GetBuffer().AsSpan(0, checked((int)frame.Length));
-            if (!bytes.IsEmpty && bytes[^1] == '\r') bytes = bytes[..^1];
-            try { return new(McpFrameStatus.Success, StrictUtf8.GetString(bytes)); }
-            catch (DecoderFallbackException) { return new(McpFrameStatus.InvalidUtf8); }
         }
+        finally { deadline?.Dispose(); }
     }
 }
 
