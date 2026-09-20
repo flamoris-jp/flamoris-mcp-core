@@ -1,0 +1,87 @@
+name: Publish NuGet package
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      NuGetPackageSourceCredentials_github: Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tagged commit is reviewed main history
+        shell: pwsh
+        run: |
+          git fetch origin +refs/heads/main:refs/remotes/origin/main --no-tags
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Tagged commit '$env:GITHUB_SHA' is not contained in current main history."
+          }
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          source-url: https://nuget.pkg.github.com/flamoris-jp/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify tag matches package version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = [string]([xml](Get-Content "Directory.Build.props")).Project.PropertyGroup.Version
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw "Missing package version in Directory.Build.props."
+          }
+          $expected = "v" + $version
+          if ($tag -ne $expected) {
+            throw "Tag '$tag' does not match package version '$expected'."
+          }
+
+      - name: Restore
+        run: dotnet restore Flamoris.Mcp.slnx
+
+      - name: Build
+        run: dotnet build Flamoris.Mcp.slnx --configuration Release --no-restore
+
+      - name: Publish self-contained bridge
+        run: dotnet publish src/Flamoris.Mcp.Bridge --configuration Release --runtime win-x64 --self-contained true --no-restore --output artifacts/bridge
+
+      - name: Test through published bridge
+        shell: pwsh
+        run: |
+          $env:FLAMORIS_TEST_BRIDGE = Join-Path $PWD 'artifacts/bridge/Flamoris.Mcp.Bridge.exe'
+          dotnet test tests/Flamoris.Mcp.Tests --configuration Release --no-build --logger "console;verbosity=normal"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Deterministic build and PackageReference smoke
+        shell: pwsh
+        run: ./scripts/package-smoke.ps1
+
+      - name: Publish to GitHub Packages
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = [string]([xml](Get-Content "Directory.Build.props")).Project.PropertyGroup.Version
+          $package = Get-ChildItem "artifacts/packages/Flamoris.Mcp.Core.$version.nupkg" |
+            Where-Object { $_.Name -notlike "*.snupkg" } |
+            Select-Object -First 1
+          if ($null -eq $package) {
+            throw "Expected Flamoris.Mcp.Core package was not produced."
+          }
+          dotnet nuget push $package.FullName `
+            --source "https://nuget.pkg.github.com/flamoris-jp/index.json" `
+            --api-key $env:GITHUB_TOKEN
