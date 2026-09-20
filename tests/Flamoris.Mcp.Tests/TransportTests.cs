@@ -145,6 +145,24 @@ public sealed class TransportTests
     }
 
     [TestMethod]
+    public async Task SequentialNotificationsAreNotCountedAsOutstandingRequests()
+    {
+        const int notificationCount = 256;
+        string notifications = string.Concat(Enumerable.Range(0, notificationCount).Select(i =>
+            $$"""{"jsonrpc":"2.0","method":"notifications/progress","params":{"progress":{{i}}}}""" + "\n"));
+        using var transport = new MemoryStream(Encoding.UTF8.GetBytes(notifications));
+        using var lease = new CancellationTokenSource();
+        await using var bounded = new BoundedProtocolStream(transport, lease.Token, new());
+        using var received = new MemoryStream();
+        byte[] buffer = new byte[97];
+        int read;
+        while ((read = await bounded.ReadAsync(buffer)) != 0)
+            await received.WriteAsync(buffer.AsMemory(0, read));
+
+        Assert.AreEqual(notificationCount, Encoding.UTF8.GetString(received.ToArray()).Count(c => c == '\n'));
+    }
+
+    [TestMethod]
     public void NamedPipeAddressCannotEscapeLocalNamespace()
     {
         foreach (string name in new[] { @"\\remote\pipe\test", "../flamoris-x", "flamoris-/x", "" })

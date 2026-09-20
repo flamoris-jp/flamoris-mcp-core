@@ -13,7 +13,7 @@ internal sealed class BoundedProtocolStream(Stream inner, CancellationToken leas
     private readonly HashSet<string> pending = [];
     private readonly object gate = new();
     private byte[] input = [];
-    private int inputOffset, notifications;
+    private int inputOffset;
     private bool disposed;
     public CancellationToken Closed => closed.Token;
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
@@ -37,7 +37,9 @@ internal sealed class BoundedProtocolStream(Stream inner, CancellationToken leas
                         string key = id.GetRawText();
                         if (key.Length > 128 || pending.Count >= options.MaxConcurrentRequests + 8 || !pending.Add(key)) throw new IOException("request_limit");
                     }
-                    else if (++notifications > 128) throw new IOException("notification_limit");
+                    // Notifications have no response and therefore no pending-id lifetime.
+                    // This pull-based stream stages only this single bounded frame; request
+                    // ids and boundary admission separately bound work that can be outstanding.
                 }
                 input = Encoding.UTF8.GetBytes(frame.Line! + "\n"); inputOffset = 0;
             }
@@ -99,7 +101,7 @@ internal sealed class BoundedProtocolStream(Stream inner, CancellationToken leas
                 Closed.ThrowIfCancellationRequested();
                 await inner.WriteAsync(output.GetBuffer().AsMemory(0, (int)output.Length), deadline.Token);
                 await inner.FlushAsync(deadline.Token);
-                if (json.RootElement.TryGetProperty("id", out var id)) lock (gate) { pending.Remove(id.GetRawText()); notifications = 0; }
+                if (json.RootElement.TryGetProperty("id", out var id)) lock (gate) pending.Remove(id.GetRawText());
                 output.SetLength(0);
             }
         }
@@ -129,4 +131,3 @@ internal sealed class BoundedProtocolStream(Stream inner, CancellationToken leas
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long value) => throw new NotSupportedException();
 }
-

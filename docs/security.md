@@ -32,9 +32,11 @@ the revocation token and recheck it at the commit boundary.
 ## Resource limits
 
 Pipe and protocol input use strict UTF-8 newline frames with configurable byte,
-read and write limits. JSON depth, pending requests, notifications, tool count,
-active requests and deadlines are bounded. One malformed or failed request is
-contained at the request/connection boundary and does not poison later clients.
+read and write limits. JSON depth, pending request IDs, tool count, active requests
+and deadlines are bounded. Notifications have no response lifetime and are read
+one bounded frame at a time rather than counted cumulatively for the connection.
+One malformed or failed request is contained at the request/connection boundary
+and does not poison later clients.
 
 ## Diagnostics and privacy
 
