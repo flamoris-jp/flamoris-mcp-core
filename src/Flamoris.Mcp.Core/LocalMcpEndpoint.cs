@@ -61,6 +61,8 @@ public sealed class LocalMcpEndpoint(McpBoundary boundary)
             boundary.Diagnostics.Event("mcp.transport", McpErrors.TransportUnavailable);
             boundary.SetConnection(grant, false, false, McpErrors.TransportUnavailable);
         }
-        finally { Interlocked.Exchange(ref running, 0); boundary.SetConnection(grant, false, false); }
+        // Per-connection cleanup already published either normal disconnect or a
+        // terminal user-safe error. Do not erase that terminal error here.
+        finally { Interlocked.Exchange(ref running, 0); }
     }
 }
