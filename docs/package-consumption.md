@@ -50,7 +50,7 @@ external MCP client -> stdio bridge -> same-user named pipe -> running applicati
 
 The bridge is not a second editor and owns no document/session state.
 
-The release workflow publishes and tests a self-contained win-x64 bridge before the Core package is pushed. Host application packaging remains responsible for shipping the matching bridge runtime alongside the product where required. Do not replace it with an application-specific second authority.
+The release workflow produces and tests a self-contained win-x64 bridge before the Core package is pushed. Host application packaging remains responsible for shipping the matching bridge runtime alongside the product where required. Do not replace it with an application-specific second authority.
 
 ## GitHub Actions consumers
 
@@ -82,7 +82,7 @@ Publishing is tag-driven.
 2. Merge the reviewed release change to `main`.
 3. Create the exact matching tag, for example `v1.0.0`.
 4. The publish workflow verifies that the tag belongs to reviewed `main` history and matches the package version.
-5. The workflow restores, builds, publishes the self-contained bridge, runs the official-client transport tests, performs deterministic/package smoke checks, packs `Flamoris.Mcp.Core`, and pushes the package to GitHub Packages.
+5. The workflow restores, builds, produces the self-contained bridge, runs the official-client transport tests, performs deterministic/package smoke checks, packs `Flamoris.Mcp.Core`, and pushes the package to GitHub Packages.
 
 Package versions are immutable. The workflow intentionally does not use `--skip-duplicate`.
 
