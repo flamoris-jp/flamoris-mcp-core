@@ -34,6 +34,7 @@ public sealed record McpOptions
     public int MaxConcurrentRequests { get; init; } = 4;
     public bool ShowConnectionStatus { get; init; } = true;
     public bool ShowActivityCursor { get; init; } = true;
+    // Bounds completion after a frame starts; ordinary idle time is unbounded.
     public int ReadTimeoutMs { get; init; } = 120_000;
     public int WriteTimeoutMs { get; init; } = 5_000;
     public void Validate()

@@ -23,9 +23,9 @@ internal sealed class BoundedProtocolStream(Stream inner, CancellationToken leas
             if (buffer.Length == 0) return 0;
             if (inputOffset == input.Length)
             {
-                using var deadline = CancellationTokenSource.CreateLinkedTokenSource(Closed, cancellationToken);
-                deadline.CancelAfter(TimeSpan.FromMilliseconds(options.ReadTimeoutMs));
-                var frame = await reader.ReadAsync(deadline.Token);
+                using var read = CancellationTokenSource.CreateLinkedTokenSource(Closed, cancellationToken);
+                var frame = await reader.ReadFrameAsync(
+                    TimeSpan.FromMilliseconds(options.ReadTimeoutMs), read.Token);
                 if (frame.Status == McpFrameStatus.EndOfStream) { closed.Cancel(); return 0; }
                 if (frame.Status != McpFrameStatus.Success) throw new IOException("invalid_frame");
                 using var json = JsonDocument.Parse(frame.Line!, new() { MaxDepth = 64 });
