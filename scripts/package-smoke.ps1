@@ -4,9 +4,9 @@ function Invoke-Dotnet {
     if ($LASTEXITCODE -ne 0) { throw "dotnet command failed ($LASTEXITCODE)" }
 }
 $core = 'src/Flamoris.Mcp.Core/Flamoris.Mcp.Core.csproj'
-Invoke-Dotnet build $core -c Release --no-restore -t:Rebuild
+Invoke-Dotnet build $core -c Release --no-restore --no-incremental
 $before = (Get-FileHash 'src/Flamoris.Mcp.Core/bin/Release/net10.0/Flamoris.Mcp.Core.dll').Hash
-Invoke-Dotnet build $core -c Release --no-restore -t:Rebuild
+Invoke-Dotnet build $core -c Release --no-restore --no-incremental
 $after = (Get-FileHash 'src/Flamoris.Mcp.Core/bin/Release/net10.0/Flamoris.Mcp.Core.dll').Hash
 if ($before -ne $after) { throw 'Non-deterministic Core binary' }
 Invoke-Dotnet pack $core -c Release --no-build -o artifacts/packages
