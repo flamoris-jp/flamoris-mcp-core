@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.6.4" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
+    <ProjectReference Include="../../src/Flamoris.Mcp.Core/Flamoris.Mcp.Core.csproj" />
+    <ProjectReference Include="../../src/Flamoris.Mcp.Bridge/Flamoris.Mcp.Bridge.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>
