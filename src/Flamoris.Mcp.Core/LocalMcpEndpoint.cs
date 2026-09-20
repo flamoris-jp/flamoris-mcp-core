@@ -21,6 +21,7 @@ public sealed class LocalMcpEndpoint(McpBoundary boundary)
                         PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
                 using var close = lifetime.Token.Register(() => { try { pipe.Dispose(); } catch { } });
                 boundary.SetConnection(grant, true, false);
+                bool failed = false;
                 try
                 {
                     await pipe.WaitForConnectionAsync(lifetime.Token);
@@ -48,10 +49,11 @@ public sealed class LocalMcpEndpoint(McpBoundary boundary)
                 catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException
                     or JsonException or McpFault or UnauthorizedAccessException)
                 {
+                    failed = true;
                     boundary.SetConnection(grant, false, false, McpErrors.TransportUnavailable);
                     boundary.Diagnostics.Event("mcp.transport", McpErrors.TransportUnavailable);
                 }
-                finally { boundary.SetConnection(grant, false, false); }
+                finally { if (!failed) boundary.SetConnection(grant, false, false); }
             }
         }
         catch (Exception)

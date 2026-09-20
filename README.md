@@ -6,9 +6,13 @@ Part of the **FLAMORIS Commons** shared infrastructure family.
 
 ## Purpose
 
-FLAMORIS MCP Core will provide reusable infrastructure for exposing FLAMORIS applications to MCP clients without creating a second editing authority.
+FLAMORIS MCP Core provides reusable infrastructure for exposing FLAMORIS applications to MCP clients without creating a second editing authority.
 
-The initial shared boundary is expected to include:
+> MCP Core provides local connection, authorization, permission, session and revision infrastructure. The application remains the editing authority.
+
+> FLAMORIS desktop applications use the common red/green MCP status language and shared AI activity indication policy.
+
+The shared boundary includes:
 
 - transport and connection primitives;
 - local-only / same-user security helpers where applicable;
@@ -26,6 +30,62 @@ Application-specific Commands, Queries, tools, domain models, and Undo/Redo sema
 **MCP is an adapter over the application's authoritative session, not a second editor.**
 
 FLAMORIS 2D, Cutwork, Kachinco, Studio, and future applications must continue to own their persistent state and domain behavior.
+
+```text
+MCP client -> stdio bridge -> same-user local pipe -> running application
+                                                   -> existing typed operation
+                                                   -> existing session/history
+```
+
+The bridge and Core never load a project or create an editor session.
+
+## Packages and runtime
+
+- `Flamoris.Mcp.Core`: .NET 10 library; host facade, scoped capability, guards,
+  request lifetime, official MCP server integration and UI-neutral projections.
+- `Flamoris.Mcp.Bridge`: self-contained console executable that authenticates and
+  forwards bounded stdio frames to the explicitly selected running host.
+- `assets/runtime`: canonical red/green status images and Chipsy activity sheet.
+
+Core references `Flamoris.Logging` 1.0.0 through NuGet. It does not vendor the DLL.
+The MCP protocol implementation uses official `ModelContextProtocol.Core` 2.2.0
+and supports its modern 2026-07-28 and legacy initialization paths.
+
+## Host integration summary
+
+1. Implement `IMcpHost` over the existing authoritative application session.
+2. Register closed, typed `HostTool<T>` adapters. Do not expose generic JSON mutation.
+3. Create `McpBoundary`, explicitly enable Read only or Edit, then start
+   `LocalMcpEndpoint` with the returned transient grant.
+4. Launch the packaged bridge with `--pipe <name>` and pass the capability only
+   through `FLAMORIS_MCP_CAPABILITY`; the bridge removes it from its environment.
+5. Revoke before document/session replacement and shutdown via `Invalidating`.
+
+See [host integration](docs/host-integration.md), [architecture](docs/architecture.md)
+and [security](docs/security.md). Consumer migrations remain separate PRs.
+
+## Settings vocabulary
+
+Hosts persist their own non-secret preferences using `mcp.enabled`,
+`mcp.permission`, `mcp.transport`, `mcp.pipeName`, `mcp.requestTimeoutMs`,
+`mcp.maxRequestBytes`, `mcp.maxConcurrentRequests`,
+`mcp.showConnectionStatus`, and `mcp.showActivityCursor`.
+Capabilities are runtime credentials and are never ordinary settings.
+
+The common transport value is `stdioBridge`; it denotes stdio plus the local
+named-pipe attachment, not a bridge-owned editing process.
+
+## Build and test
+
+```powershell
+dotnet restore Flamoris.Mcp.slnx
+dotnet build Flamoris.Mcp.slnx -c Release --no-restore
+dotnet publish src/Flamoris.Mcp.Bridge -c Release -r win-x64 --self-contained true
+dotnet test tests/Flamoris.Mcp.Tests -c Release --no-build
+```
+
+The Windows CI runs official-client transport tests through the published bridge,
+deterministic rebuild checks, NuGet packing and a consumer PackageReference smoke.
 
 ## Design principles
 
@@ -51,7 +111,8 @@ A standalone MCP Hub may use this repository in the future, but the Hub is not p
 
 ## Status
 
-Initial repository foundation. API and transport boundaries are not yet frozen.
+Issue #1 foundation candidate. API compatibility is not frozen before review and
+the first versioned package release.
 
 ## License
 

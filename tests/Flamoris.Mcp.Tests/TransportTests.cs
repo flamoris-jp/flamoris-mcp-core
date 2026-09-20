@@ -152,4 +152,19 @@ public sealed class TransportTests
         Assert.IsTrue(McpOptions.ValidPipeName("flamoris-" + Guid.NewGuid().ToString("N")));
         if (OperatingSystem.IsWindows()) Assert.AreEqual(8u, WindowsLocalPipe.RejectRemoteClients);
     }
+
+    [TestMethod]
+    public async Task TerminalEndpointFailureKeepsUserSafeError()
+    {
+        var host = new HostHarness();
+        using var core = host.Boundary(new() { PipeName = "flamoris-duplicate-" + Guid.NewGuid().ToString("N") });
+        using var grant = await core.EnableAsync(McpPermission.Edit);
+        using var occupied = OperatingSystem.IsWindows()
+            ? WindowsLocalPipe.Create(core.Options.PipeName)
+            : new NamedPipeServerStream(core.Options.PipeName, PipeDirection.InOut, 1,
+                PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+        await new LocalMcpEndpoint(core).RunAsync(grant).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.IsFalse(core.Status.Current.IsGreen);
+        Assert.AreEqual(McpErrors.TransportUnavailable, core.Status.Current.LastError);
+    }
 }
