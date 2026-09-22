@@ -40,6 +40,26 @@ public sealed class TunnelClientSampleTests
     }
 
     [TestMethod]
+    public void SettingsRejectShellFragmentsRemoteHealthAndMissingExecutables()
+    {
+        using var fixture = new SettingsFixture();
+        ManagedConnectionSettings valid = fixture.Settings(autoStart: true);
+
+        Assert.ThrowsException<ArgumentException>(() => (valid with
+        {
+            ProfileName = "profile & whoami",
+        }).Validate());
+        Assert.ThrowsException<ArgumentException>(() => (valid with
+        {
+            HealthListenAddress = "0.0.0.0:8080",
+        }).Validate());
+        Assert.ThrowsException<ArgumentException>(() => (valid with
+        {
+            TunnelClientExecutable = Path.Combine(Path.GetTempPath(), "missing.exe"),
+        }).Validate());
+    }
+
+    [TestMethod]
     public async Task ProcessHostUsesEnvironmentAndStopsOnlyItsOwnedChild()
     {
         using var fixture = new SettingsFixture();

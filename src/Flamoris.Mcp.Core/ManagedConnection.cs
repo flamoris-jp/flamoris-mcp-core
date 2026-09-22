@@ -221,7 +221,7 @@ public sealed class ManagedConnectionLifecycle : IAsyncDisposable
     {
         lock (stateGate)
         {
-            ObjectDisposedException.ThrowIf(disposed, this);
+            if (disposed) return;
             bool effective = connected && status.McpEnabled
                 && status.ProviderState == ManagedConnectionProviderState.Running;
             if (status.ExternalClientConnected == effective) return;

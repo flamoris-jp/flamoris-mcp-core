@@ -52,7 +52,7 @@ public sealed class ManagedConnectionTests
     }
 
     [TestMethod]
-    public async Task DisableAndShutdownRevokeBeforeStoppingOwnedProvider()
+    public async Task DisableRevokesBeforeStoppingOwnedProvider()
     {
         var events = new List<string>();
         var provider = new FakeProvider(events);
@@ -70,6 +70,51 @@ public sealed class ManagedConnectionTests
         CollectionAssert.AreEqual(new[] { "revoke", "stop" }, events);
         Assert.IsFalse(lifecycle.Current.McpEnabled);
         Assert.AreEqual(ManagedConnectionProviderState.Stopped, lifecycle.Current.ProviderState);
+    }
+
+    [TestMethod]
+    public async Task ShutdownRevokesBeforeStopAndRejectsFurtherUse()
+    {
+        var events = new List<string>();
+        var provider = new FakeProvider(events);
+        await using var lifecycle = new ManagedConnectionLifecycle(provider, _ =>
+        {
+            events.Add("revoke");
+            return ValueTask.CompletedTask;
+        });
+        await lifecycle.MarkEnabledAsync();
+        await lifecycle.StartAsync();
+        events.Clear();
+
+        await lifecycle.ShutdownAsync();
+
+        CollectionAssert.AreEqual(new[] { "revoke", "stop" }, events);
+        Assert.IsFalse(lifecycle.Current.McpEnabled);
+        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(() => lifecycle.StartAsync());
+    }
+
+    [TestMethod]
+    public async Task RevokeFailureStillStopsProviderAndExposesOnlyBoundedCode()
+    {
+        const string secret = "PRIVATE_REVOKE_FAILURE";
+        var events = new List<string>();
+        var provider = new FakeProvider(events);
+        await using var lifecycle = new ManagedConnectionLifecycle(provider, _ =>
+        {
+            events.Add("revoke");
+            throw new InvalidOperationException(secret);
+        });
+        await lifecycle.MarkEnabledAsync();
+        await lifecycle.StartAsync();
+        events.Clear();
+
+        var failure = await Assert.ThrowsExceptionAsync<ManagedConnectionException>(
+            () => lifecycle.DisableAsync());
+
+        CollectionAssert.AreEqual(new[] { "revoke", "stop" }, events);
+        Assert.AreEqual(ManagedConnectionErrors.RevokeFailed, failure.Code);
+        Assert.IsFalse(failure.ToString().Contains(secret, StringComparison.Ordinal));
+        Assert.AreEqual(ManagedConnectionProviderState.Faulted, lifecycle.Current.ProviderState);
     }
 
     [TestMethod]
