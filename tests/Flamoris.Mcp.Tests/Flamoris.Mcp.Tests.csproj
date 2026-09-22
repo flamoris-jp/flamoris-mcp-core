@@ -6,5 +6,6 @@
     <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
     <ProjectReference Include="../../src/Flamoris.Mcp.Core/Flamoris.Mcp.Core.csproj" />
     <ProjectReference Include="../../src/Flamoris.Mcp.Bridge/Flamoris.Mcp.Bridge.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../samples/wpf-managed-connection/Flamoris.Mcp.WpfManagedConnection.Sample.csproj" />
   </ItemGroup>
 </Project>

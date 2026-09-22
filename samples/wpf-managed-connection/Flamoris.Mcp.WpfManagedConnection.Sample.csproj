@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Flamoris.Mcp.WpfManagedConnection.Sample</AssemblyName>
+    <RootNamespace>Flamoris.Mcp.Samples.ManagedConnection</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Flamoris.Mcp.Core/Flamoris.Mcp.Core.csproj" />
+  </ItemGroup>
+</Project>
