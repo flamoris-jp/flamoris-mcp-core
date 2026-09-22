@@ -18,6 +18,12 @@ pipe preamble before any MCP bytes reach the SDK. Comparison is fixed-time. The
 credential is passed to the child bridge by a dedicated environment variable,
 removed at startup, never placed in argv and never persisted by Core.
 
+For an optional managed provider, the host retrieves long-lived provider
+credentials from reviewed secure storage at launch. The current capability may be
+injected into an owned helper process environment for bridge inheritance, but must
+not enter YAML, settings, argv, logs, exception messages or diagnostics. Stale
+configuration cannot authenticate after grant revocation.
+
 This boundary does not protect against full compromise of the permitted OS user.
 There is no LAN/cloud listener, OAuth server, filesystem browser, process tool,
 network tool or generic eval in Core.
@@ -28,6 +34,11 @@ Disable, permission change, application restart, authority replacement and
 document replacement rotate/revoke the capability. The host must publish
 `Invalidating` before installing replacement authority. Existing requests share
 the revocation token and recheck it at the commit boundary.
+
+`ManagedConnectionLifecycle.DisableAsync` and `ShutdownAsync` invoke the host
+revoke callback before provider cleanup. Once cleanup begins, cancellation does not
+skip revocation or owned-process stop. A revoke failure is reported as a bounded
+fault and never falls back to an insecure provider mode.
 
 ## Resource limits
 
@@ -55,3 +66,7 @@ Core cannot make arbitrary host callbacks transactional. Host commit callbacks
 must be synchronous and atomic, or roll back before throwing. Adapters must use a
 closed reviewed tool registry and independently authorize any future file or
 process effect. `Edit` grants only those registered editor operations.
+
+Provider implementations additionally validate explicit executable paths, launch
+without a shell, construct fixed argument lists, and retain only the exact child
+process handle they own. They must never discover or terminate processes by name.

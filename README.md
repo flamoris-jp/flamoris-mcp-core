@@ -47,10 +47,10 @@ The bridge and Core never load a project or create an editor session.
   forwards bounded stdio frames to the explicitly selected running host.
 - `assets/runtime`: canonical red/green status images and Chipsy activity sheet.
 
-Stable package: `Flamoris.Mcp.Core 1.0.1` from the FLAMORIS GitHub Packages feed.
+Current package line: `Flamoris.Mcp.Core 1.1.0` from the FLAMORIS GitHub Packages feed.
 
 ~~~xml
-<PackageReference Include="Flamoris.Mcp.Core" Version="1.0.1" />
+<PackageReference Include="Flamoris.Mcp.Core" Version="1.1.0" />
 ~~~
 
 Core references `Flamoris.Logging` 1.0.0 through NuGet. It does not vendor the DLL.
@@ -73,6 +73,21 @@ consumer CI, bridge packaging, and the tag-driven release contract.
 See [host integration](docs/host-integration.md), [architecture](docs/architecture.md)
 and [security](docs/security.md). Consumer migrations remain separate PRs.
 
+## Managed connection lifecycle
+
+`ManagedConnectionLifecycle` defines provider-neutral start, refresh, stop,
+revoke and shutdown ordering for desktop hosts that optionally manage a helper
+such as `tunnel-client`. It deliberately does not own provider settings, WPF UI,
+credential storage, grant creation or application policy.
+
+The copyable [WPF managed-connection sample](samples/wpf-managed-connection/README.md)
+records the current `tunnel-client v0.0.14` integration. It is reference source to
+copy and adapt, not a second production framework or an automatically installed
+provider. Cutwork is the first planned production adoption.
+
+See [managed connections](docs/managed-connections.md) for the state model,
+responsibility boundary, configuration vocabulary and provider-extension rules.
+
 ## Settings vocabulary
 
 Hosts persist their own non-secret preferences using `mcp.enabled`,
@@ -87,6 +102,12 @@ for its next request and is still interrupted immediately by revocation or shutd
 
 The common transport value is `stdioBridge`; it denotes stdio plus the local
 named-pipe attachment, not a bridge-owned editing process.
+
+Managed helper preferences use `mcp.connection.method`,
+`mcp.connection.autoStart`, and provider-owned keys below
+`mcp.connection.providers.<providerId>.*`. Secret values and transient MCP
+capabilities are not settings. UI labels, provider dropdowns and secure credential
+references remain application-owned.
 
 ## Build and test
 
