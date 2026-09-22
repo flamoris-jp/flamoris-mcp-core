@@ -22,8 +22,10 @@ public sealed class McpConnectionController(
     public async Task EnableAsync(CancellationToken cancellationToken = default)
     {
         await issueGrant(cancellationToken);
-        await lifecycle.MarkEnabledAsync(cancellationToken);
-        if (settings.AutoStart) await lifecycle.StartAsync(cancellationToken);
+        // A successful host mutation must be committed to lifecycle state even if the caller
+        // cancels at that boundary; otherwise a later disable could skip revoking a live grant.
+        await lifecycle.MarkEnabledAsync(CancellationToken.None);
+        if (settings.AutoStart) await lifecycle.StartAsync(CancellationToken.None);
     }
 
     public Task StartManagedConnectionAsync(CancellationToken cancellationToken = default) =>
@@ -32,7 +34,9 @@ public sealed class McpConnectionController(
     public async Task RefreshAfterGrantRotationAsync(CancellationToken cancellationToken = default)
     {
         await rotateGrant(cancellationToken);
-        await lifecycle.RefreshAsync(cancellationToken);
+        // Once rotation succeeds, reconcile the owned provider with the new material before
+        // observing cancellation so it cannot keep using the superseded grant.
+        await lifecycle.RefreshAsync(CancellationToken.None);
     }
 
     public Task StopManagedConnectionAsync(CancellationToken cancellationToken = default) =>

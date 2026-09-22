@@ -136,6 +136,55 @@ public sealed class TunnelClientSampleTests
     }
 
     [TestMethod]
+    public async Task ControllerCommitsIssuedGrantWhenCancellationWinsAfterHostMutation()
+    {
+        using var fixture = new SettingsFixture();
+        var cancellation = new CancellationTokenSource();
+        int revoked = 0;
+        await using var lifecycle = new ManagedConnectionLifecycle(new CountingProvider(), _ =>
+        {
+            revoked++;
+            return ValueTask.CompletedTask;
+        });
+        var controller = new McpConnectionController(fixture.Settings(autoStart: false), lifecycle,
+            _ =>
+            {
+                cancellation.Cancel();
+                return ValueTask.CompletedTask;
+            },
+            _ => ValueTask.CompletedTask);
+
+        await controller.EnableAsync(cancellation.Token);
+
+        Assert.IsTrue(controller.Current.McpEnabled);
+        await controller.DisableAsync();
+        Assert.AreEqual(1, revoked, "The successfully issued grant must remain revocable.");
+    }
+
+    [TestMethod]
+    public async Task ControllerRefreshesAfterRotationWhenCancellationWinsAfterHostMutation()
+    {
+        using var fixture = new SettingsFixture();
+        var cancellation = new CancellationTokenSource();
+        var provider = new CountingProvider();
+        await using var lifecycle = new ManagedConnectionLifecycle(provider, _ => ValueTask.CompletedTask);
+        var controller = new McpConnectionController(fixture.Settings(autoStart: true), lifecycle,
+            _ => ValueTask.CompletedTask,
+            _ =>
+            {
+                cancellation.Cancel();
+                return ValueTask.CompletedTask;
+            });
+        await controller.EnableAsync();
+
+        await controller.RefreshAfterGrantRotationAsync(cancellation.Token);
+
+        Assert.AreEqual(1, provider.Refreshes,
+            "A successful rotation must be reconciled before cancellation is observed.");
+        Assert.AreEqual(ManagedConnectionProviderState.Running, controller.Current.ProviderState);
+    }
+
+    [TestMethod]
     public async Task ProviderRefreshConsumesLatestPipeAndCapability()
     {
         using var fixture = new SettingsFixture();

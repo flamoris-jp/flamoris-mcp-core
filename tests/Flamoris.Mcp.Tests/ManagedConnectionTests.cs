@@ -30,8 +30,32 @@ public sealed class ManagedConnectionTests
         await lifecycle.StopAsync();
         Assert.IsTrue(lifecycle.Current.McpEnabled, "Manual connection must remain possible after helper stop.");
         Assert.AreEqual(ManagedConnectionProviderState.Stopped, lifecycle.Current.ProviderState);
-        Assert.IsFalse(lifecycle.Current.ExternalClientConnected);
+        Assert.IsTrue(lifecycle.Current.ExternalClientConnected,
+            "Provider transitions must not overwrite the authenticated boundary measurement.");
         CollectionAssert.AreEqual(new[] { "start", "stop" }, events);
+    }
+
+    [TestMethod]
+    public async Task ManualClientAttachmentIsIndependentFromProviderState()
+    {
+        var provider = new FakeProvider([]);
+        await using var lifecycle = new ManagedConnectionLifecycle(provider, _ => ValueTask.CompletedTask);
+
+        await lifecycle.MarkEnabledAsync();
+        lifecycle.SetExternalClientConnected(true);
+
+        Assert.IsTrue(lifecycle.Current.McpEnabled);
+        Assert.AreEqual(ManagedConnectionProviderState.Stopped, lifecycle.Current.ProviderState);
+        Assert.IsTrue(lifecycle.Current.ExternalClientConnected);
+
+        await lifecycle.StartAsync();
+        await lifecycle.RefreshAsync();
+        await lifecycle.StopAsync();
+
+        Assert.IsTrue(lifecycle.Current.ExternalClientConnected);
+        await lifecycle.DisableAsync();
+        Assert.IsFalse(lifecycle.Current.ExternalClientConnected,
+            "Successful revocation is the lifecycle boundary that clears attachment state.");
     }
 
     [TestMethod]

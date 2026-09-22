@@ -97,7 +97,6 @@ public sealed class ManagedConnectionLifecycle : IAsyncDisposable
                     ProviderState = status.ProviderState == ManagedConnectionProviderState.Faulted
                         ? ManagedConnectionProviderState.Stopped
                         : status.ProviderState,
-                    ExternalClientConnected = false,
                     ErrorCode = null,
                 };
             }
@@ -119,7 +118,6 @@ public sealed class ManagedConnectionLifecycle : IAsyncDisposable
             Transition(current with
             {
                 ProviderState = ManagedConnectionProviderState.Starting,
-                ExternalClientConnected = false,
                 ErrorCode = null,
             });
             try
@@ -133,7 +131,6 @@ public sealed class ManagedConnectionLifecycle : IAsyncDisposable
                 Transition(Current with
                 {
                     ProviderState = ManagedConnectionProviderState.Stopped,
-                    ExternalClientConnected = false,
                 });
                 throw;
             }
@@ -163,7 +160,6 @@ public sealed class ManagedConnectionLifecycle : IAsyncDisposable
                 ProviderState = wasRunning
                     ? ManagedConnectionProviderState.Refreshing
                     : ManagedConnectionProviderState.Starting,
-                ExternalClientConnected = false,
                 ErrorCode = null,
             });
             try
@@ -178,7 +174,6 @@ public sealed class ManagedConnectionLifecycle : IAsyncDisposable
                 Transition(Current with
                 {
                     ProviderState = ManagedConnectionProviderState.Stopped,
-                    ExternalClientConnected = false,
                 });
                 throw;
             }
@@ -222,10 +217,8 @@ public sealed class ManagedConnectionLifecycle : IAsyncDisposable
         lock (stateGate)
         {
             if (disposed) return;
-            bool effective = connected && status.McpEnabled
-                && status.ProviderState == ManagedConnectionProviderState.Running;
-            if (status.ExternalClientConnected == effective) return;
-            status = status with { ExternalClientConnected = effective };
+            if (status.ExternalClientConnected == connected) return;
+            status = status with { ExternalClientConnected = connected };
         }
         Notify();
     }
@@ -270,16 +263,11 @@ public sealed class ManagedConnectionLifecycle : IAsyncDisposable
     {
         ManagedConnectionStatus current = Current;
         if (current.ProviderState == ManagedConnectionProviderState.Stopped)
-        {
-            if (current.ExternalClientConnected)
-                Transition(current with { ExternalClientConnected = false });
             return;
-        }
 
         Transition(current with
         {
             ProviderState = ManagedConnectionProviderState.Stopping,
-            ExternalClientConnected = false,
         });
         try
         {
@@ -306,7 +294,6 @@ public sealed class ManagedConnectionLifecycle : IAsyncDisposable
     private void Fail(string errorCode) => Transition(Current with
     {
         ProviderState = ManagedConnectionProviderState.Faulted,
-        ExternalClientConnected = false,
         ErrorCode = errorCode,
     });
 
