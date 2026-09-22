@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace Flamoris.Mcp.Samples.ManagedConnection;
@@ -6,6 +7,11 @@ namespace Flamoris.Mcp.Samples.ManagedConnection;
 /// <summary>Exact configuration shape verified for tunnel-client v0.0.14.</summary>
 public static class TunnelClientConfiguration
 {
+    private static readonly JsonSerializerOptions YamlScalarOptions = new()
+    {
+        // JSON escaping remains valid YAML; avoid unreadable \u0022 for command quotes.
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
     public const string ApiKeyEnvironmentVariable = "CONTROL_PLANE_API_KEY";
     public const string CapabilityEnvironmentVariable = "FLAMORIS_MCP_CAPABILITY";
     public const string SupportedVersion = "0.0.14";
@@ -46,7 +52,7 @@ public static class TunnelClientConfiguration
     }
 
     // JSON string encoding is a valid YAML double-quoted scalar and avoids a YAML dependency.
-    private static string YamlString(string value) => JsonSerializer.Serialize(value);
+    private static string YamlString(string value) => JsonSerializer.Serialize(value, YamlScalarOptions);
 }
 
 public static class WindowsCommandLine

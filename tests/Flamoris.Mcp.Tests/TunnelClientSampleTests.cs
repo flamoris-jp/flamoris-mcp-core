@@ -16,7 +16,8 @@ public sealed class TunnelClientSampleTests
         using var fixture = new SettingsFixture();
         ManagedConnectionSettings settings = fixture.Settings(autoStart: true);
 
-        string yaml = TunnelClientConfiguration.BuildYaml(settings, "flamoris-cutwork-test");
+        string yaml = TunnelClientConfiguration.BuildYaml(settings, "flamoris-cutwork-test")
+            .ReplaceLineEndings("\n");
 
         StringAssert.StartsWith(yaml, "config_version: 1\n");
         StringAssert.Contains(yaml, "control_plane:\n  base_url: \"https://api.openai.com\"");
