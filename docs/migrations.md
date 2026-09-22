@@ -25,6 +25,12 @@ transactions and visual query logic in Cutwork. Core supplies grant/revocation,
 transport, common errors and projections. Preserve the rule that rollback may
 advance the real document revision.
 
+Cutwork is also the first planned consumer of the optional managed-connection
+lifecycle added in 1.1.0. Keep settings UI, provider selection, tunnel-client
+configuration, secure credential storage and process ownership in Cutwork. Copy
+and adapt the reference sample; do not add those application policies to Core.
+See [the focused follow-up proposal](cutwork-managed-connection-follow-up.md).
+
 ## FLAMORIS 2D
 
 Preserve 2D's reviewed capability, permission, revision and status semantics.

@@ -66,3 +66,27 @@ See `assets/README.md` for canonical asset coordinates and DPI guidance.
 A failed/cancelled open before step 2 may preserve access. Authority/control-channel
 loss must fail closed: revoke and stop the endpoint before MCP can become the sole
 remaining editor.
+
+## Optional managed provider
+
+Use `ManagedConnectionLifecycle` only when the application chooses to start a
+provider helper for the user. Construct an application-owned
+`IMcpConnectionProvider`, pass a revoke callback that disables the current
+`McpBoundary`/grant, then follow this order:
+
+1. issue the current grant and start the local endpoint;
+2. call `MarkEnabledAsync`;
+3. call `StartAsync` only when application policy or an explicit user action enables it;
+4. project `McpBoundary.Status.Current.Connected` with
+   `SetExternalClientConnected`;
+5. after pipe/capability rotation, update the host-owned material source and call
+   `RefreshAsync`;
+6. use `StopAsync` to stop only the helper while preserving manual MCP access;
+7. use `DisableAsync` or `ShutdownAsync` to revoke before stopping the helper.
+
+`Changed` is a notification to reread `Current`. A WPF application marshals it to
+its Dispatcher and owns all labels, dropdowns, icons and Chipsy behavior. Do not
+synchronously invoke another lifecycle operation from a `Changed` callback.
+
+Copy [the managed connection sample](../samples/wpf-managed-connection/README.md)
+instead of making the sample project a production dependency.
