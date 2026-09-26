@@ -4,50 +4,62 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
+  id-token: write
 
 jobs:
   publish:
     runs-on: windows-latest
     timeout-minutes: 20
-    env:
-      NuGetPackageSourceCredentials_github: Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Verify tagged commit is reviewed main history
+      - name: Verify release source
         shell: pwsh
         run: |
           git fetch origin +refs/heads/main:refs/remotes/origin/main --no-tags
-          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
-          if ($LASTEXITCODE -ne 0) {
-            throw "Tagged commit '$env:GITHUB_SHA' is not contained in current main history."
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            if ("${{ github.ref }}" -ne "refs/heads/main") {
+              throw "Manual package publishing must run from main."
+            }
+            $mainSha = (git rev-parse origin/main).Trim()
+            if ($env:GITHUB_SHA -ne $mainSha) {
+              throw "Manual package publishing must run from the exact current main commit."
+            }
+          }
+          else {
+            git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+            if ($LASTEXITCODE -ne 0) {
+              throw "Tagged commit '$env:GITHUB_SHA' is not contained in current main history."
+            }
           }
 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
-          source-url: https://nuget.pkg.github.com/flamoris-jp/index.json
-        env:
-          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify tag matches package version
+      - name: Verify release version
         shell: pwsh
         run: |
-          $tag = "${{ github.ref_name }}"
           $version = [string]([xml](Get-Content "Directory.Build.props")).Project.PropertyGroup.Version
           if ([string]::IsNullOrWhiteSpace($version)) {
             throw "Missing package version in Directory.Build.props."
           }
-          $expected = "v" + $version
-          if ($tag -ne $expected) {
-            throw "Tag '$tag' does not match package version '$expected'."
+          if ("${{ github.event_name }}" -eq "push") {
+            $tag = "${{ github.ref_name }}"
+            $expected = "v" + $version
+            if ($tag -ne $expected) {
+              throw "Tag '$tag' does not match package version '$expected'."
+            }
+          }
+          else {
+            Write-Host "Manual publish of Flamoris.Mcp.Core $version from current main."
           }
 
       - name: Restore
@@ -70,10 +82,16 @@ jobs:
         shell: pwsh
         run: ./scripts/package-smoke.ps1
 
-      - name: Publish to GitHub Packages
+      - name: NuGet login
+        uses: NuGet/login@v1
+        id: nuget
+        with:
+          user: akino-nanto
+
+      - name: Publish to nuget.org
         shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
         run: |
           $version = [string]([xml](Get-Content "Directory.Build.props")).Project.PropertyGroup.Version
           $package = Get-ChildItem "artifacts/packages/Flamoris.Mcp.Core.$version.nupkg" |
@@ -83,5 +101,5 @@ jobs:
             throw "Expected Flamoris.Mcp.Core package was not produced."
           }
           dotnet nuget push $package.FullName `
-            --source "https://nuget.pkg.github.com/flamoris-jp/index.json" `
-            --api-key $env:GITHUB_TOKEN
+            --source "https://api.nuget.org/v3/index.json" `
+            --api-key $env:NUGET_API_KEY

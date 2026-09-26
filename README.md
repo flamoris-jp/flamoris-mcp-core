@@ -47,7 +47,7 @@ The bridge and Core never load a project or create an editor session.
   forwards bounded stdio frames to the explicitly selected running host.
 - `assets/runtime`: canonical red/green status images and Chipsy activity sheet.
 
-Current package line: `Flamoris.Mcp.Core 1.1.0` from the FLAMORIS GitHub Packages feed.
+Current package line: `Flamoris.Mcp.Core 1.1.0` from nuget.org.
 
 ~~~xml
 <PackageReference Include="Flamoris.Mcp.Core" Version="1.1.0" />
@@ -57,7 +57,7 @@ Core references `Flamoris.Logging` 1.0.0 through NuGet. It does not vendor the D
 The MCP protocol implementation uses official `ModelContextProtocol.Core` 2.2.0
 and supports its modern 2026-07-28 and legacy initialization paths.
 
-See [package consumption](docs/package-consumption.md) for feed authentication,
+See [package consumption](docs/package-consumption.md) for anonymous restore,
 consumer CI, bridge packaging, and the tag-driven release contract.
 
 ## Host integration summary

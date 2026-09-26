@@ -7,30 +7,15 @@ FLAMORIS applications should consume MCP Core as a NuGet package. Do not vendor 
 - Package ID: `Flamoris.Mcp.Core`
 - Current version: `1.1.0`
 - Target framework: `.NET 10`
-- Feed: `https://nuget.pkg.github.com/flamoris-jp/index.json`
+- Feed: `https://api.nuget.org/v3/index.json`
 
-The package depends on `Flamoris.Logging 1.0.0` and the official MCP C# SDK.
+The package depends on `Flamoris.Logging 1.0.0` and the official MCP C# SDK, also restored through nuget.org.
 
 ## Local development
 
-GitHub Packages requires authentication for private organization packages.
+`Flamoris.Mcp.Core` is published publicly on nuget.org. Ordinary restore does not require GitHub authentication, a PAT, or a FLAMORIS-specific package source.
 
-Configure the FLAMORIS feed with a GitHub credential that can read packages. Keep credentials outside source control.
-
-Example:
-
-~~~xml
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <clear />
-    <add key="flamoris" value="https://nuget.pkg.github.com/flamoris-jp/index.json" />
-    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-  </packageSources>
-</configuration>
-~~~
-
-Then reference the stable package:
+Reference the stable package normally:
 
 ~~~xml
 <ItemGroup>
@@ -38,7 +23,11 @@ Then reference the stable package:
 </ItemGroup>
 ~~~
 
-Package access is controlled by GitHub package/repository permissions. Grant consumer repositories read access to the package instead of copying binaries or committing long-lived credentials.
+With the standard nuget.org source enabled:
+
+~~~powershell
+dotnet restore
+~~~
 
 ## Bridge runtime
 
@@ -54,35 +43,31 @@ The release workflow produces and tests a self-contained win-x64 bridge before t
 
 ## GitHub Actions consumers
 
-A consumer workflow can configure the package source through `actions/setup-dotnet`:
+Consumer workflows need no package-read permission or NuGet credential for `Flamoris.Mcp.Core`.
 
 ~~~yaml
 permissions:
   contents: read
-  packages: read
 
 steps:
   - uses: actions/setup-dotnet@v4
     with:
       dotnet-version: 10.0.x
-      source-url: https://nuget.pkg.github.com/flamoris-jp/index.json
-    env:
-      NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   - run: dotnet restore
-    env:
-      NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ~~~
 
 ## Publishing a new version
 
-Publishing is tag-driven.
+Publishing is normally tag-driven.
 
 1. Update `<Version>` in `Directory.Build.props`.
 2. Merge the reviewed release change to `main`.
-3. Create the exact matching tag, for example `v1.1.0`.
+3. Create the exact matching tag, for example `v1.1.1`.
 4. The publish workflow verifies that the tag belongs to reviewed `main` history and matches the package version.
-5. The workflow restores, builds, produces the self-contained bridge, runs the official-client transport tests, performs deterministic/package smoke checks, packs `Flamoris.Mcp.Core`, and pushes the package to GitHub Packages.
+5. The workflow restores, builds, produces the self-contained bridge, runs the official-client transport tests, performs deterministic/package smoke checks, obtains a short-lived nuget.org API key through Trusted Publishing (GitHub Actions OIDC), and pushes `Flamoris.Mcp.Core` to nuget.org.
+
+The workflow also supports a guarded manual dispatch from the exact current `main` commit for feed migration or release recovery. Normal releases should use matching version tags.
 
 Package versions are immutable. The workflow intentionally does not use `--skip-duplicate`.
 
