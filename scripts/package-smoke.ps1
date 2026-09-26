@@ -29,12 +29,10 @@ New-Item -ItemType Directory -Force artifacts/consumer | Out-Null
   <packageSources>
     <clear />
     <add key="local" value="$packagePath" />
-    <add key="github" value="https://nuget.pkg.github.com/flamoris-jp/index.json" />
     <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
   </packageSources>
   <packageSourceMapping>
     <packageSource key="local"><package pattern="Flamoris.Mcp.Core" /></packageSource>
-    <packageSource key="github"><package pattern="Flamoris.Logging" /></packageSource>
     <packageSource key="nuget.org"><package pattern="*" /></packageSource>
   </packageSourceMapping>
 </configuration>
