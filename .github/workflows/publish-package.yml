@@ -94,10 +94,52 @@ jobs:
           NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
         run: |
           $version = [string]([xml](Get-Content "Directory.Build.props")).Project.PropertyGroup.Version
-          foreach ($id in @('Flamoris.Mcp.Core', 'Flamoris.Mcp.Wpf')) {
+          $ids = @('Flamoris.Mcp.Core', 'Flamoris.Mcp.Wpf')
+          $indexBase = 'https://api.nuget.org/v3-flatcontainer'
+
+          function Test-NuGetVersion([string]$id, [string]$version) {
+            $indexUrl = "$indexBase/$($id.ToLowerInvariant())/index.json"
+            try {
+              $index = Invoke-RestMethod -Uri $indexUrl -TimeoutSec 20
+              return $index.versions -contains $version
+            }
+            catch {
+              $statusCode = [int]$_.Exception.Response.StatusCode
+              if ($statusCode -eq 404) { return $false }
+              throw "Could not verify $id $version on nuget.org: $($_.Exception.Message)"
+            }
+          }
+
+          foreach ($id in $ids) {
+            if (Test-NuGetVersion $id $version) {
+              Write-Host "$id $version is already published; skipping immutable package."
+              continue
+            }
+
             $package = Get-Item "artifacts/packages/$id.$version.nupkg"
             dotnet nuget push $package.FullName `
               --source "https://api.nuget.org/v3/index.json" `
               --api-key $env:NUGET_API_KEY
-            if ($LASTEXITCODE -ne 0) { throw "Failed to publish $id" }
+            if ($LASTEXITCODE -ne 0) {
+              # A timeout may occur after nuget.org accepted the immutable package.
+              # Continue only if the exact ID/version is now visible.
+              if (-not (Test-NuGetVersion $id $version)) {
+                throw "Failed to publish $id $version."
+              }
+              Write-Host "$id $version is visible after push returned an error."
+            }
           }
+
+          # nuget.org indexing can lag behind a successful push. Verify both packages
+          # and fail the workflow if either immutable release is still unavailable.
+          $deadline = (Get-Date).AddMinutes(3)
+          do {
+            $missing = @($ids | Where-Object { -not (Test-NuGetVersion $_ $version) })
+            if ($missing.Count -eq 0) { break }
+            Start-Sleep -Seconds 10
+          } while ((Get-Date) -lt $deadline)
+
+          if ($missing.Count -gt 0) {
+            throw "Release incomplete; not visible on nuget.org: $($missing -join ', ') $version"
+          }
+          Write-Host "Verified both NuGet packages at version $version."
