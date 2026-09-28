@@ -178,12 +178,13 @@ public sealed class McpDesktopUi
         }
         catch
         {
+            wanted = false; reconnectPending = false;
             error = "connection_failed";
             await StopCore();
         }
         finally { busy = false; operations.Release(); Refresh(); }
     }
-    private void ProviderExited() => Post(() => { error = "connection_failed"; Invalidate(); });
+    private void ProviderExited() => Post(() => { wanted = false; error = "connection_failed"; Invalidate(); });
     public async Task StopAsync()
     {
         await operations.WaitAsync();
