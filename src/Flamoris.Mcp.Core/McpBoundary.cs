@@ -138,7 +138,7 @@ public sealed class McpBoundary : IDisposable
     public JsonElement DescribeCatalog()
     {
         var tools = Tools.Values.Select(McpProtocol.Describe).Select(t => new {
-            name = t.Name, description = t.Description, input_schema = t.InputSchema }).ToList();
+            name = t.Name, description = t.Description ?? "", input_schema = t.InputSchema }).ToList();
         tools.Insert(0, new { name = "mcp.context", description = "Current live identity, revision and permission.",
             input_schema = JsonSerializer.SerializeToElement(new { type = "object", properties = new {}, additionalProperties = false }) });
         return JsonSerializer.SerializeToElement(tools);
