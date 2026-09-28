@@ -66,7 +66,7 @@ internal static class McpProtocol
         try { await server.RunAsync(bounded.Closed); }
         finally { boundary.Diagnostics.Event("mcp.protocol", "stopped"); }
     }
-    private static Tool Describe(HostTool tool)
+    internal static Tool Describe(HostTool tool)
     {
         var properties = new Dictionary<string, object> {
             ["input"] = tool.InputSchema,
@@ -89,7 +89,7 @@ internal static class McpProtocol
             }),
         };
     }
-    private static RequestGuard ParseGuard(JsonElement value)
+    internal static RequestGuard ParseGuard(JsonElement value)
     {
         if (value.ValueKind != JsonValueKind.Object || value.EnumerateObject().Any(p =>
             p.Name is not ("runtimeId" or "documentToken" or "expectedRevision")))
@@ -110,7 +110,7 @@ internal static class McpProtocol
         }
         return new(Text("runtimeId"), Text("documentToken"), revision);
     }
-    private static CallToolResult ToWire(McpResult result)
+    internal static CallToolResult ToWire(McpResult result)
     {
         JsonElement value = result.Error is { } code
             ? JsonSerializer.SerializeToElement(new { error = new { code } })

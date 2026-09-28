@@ -3,7 +3,7 @@ namespace Flamoris.Mcp.Core;
 public sealed record McpStatus(bool Enabled, bool EndpointAvailable, bool Connected,
     int ForegroundCount, string? LastError)
 {
-    public bool IsGreen => Enabled && EndpointAvailable && LastError is null;
+    public bool IsGreen => Enabled && EndpointAvailable && Connected && LastError is null;
     public bool ActivityVisible => ForegroundCount > 0;
 }
 
@@ -16,6 +16,13 @@ public sealed class StatusProjection
     public McpStatus Current { get { lock (gate) return value; } }
     // A notification to reread Current, not a possibly stale snapshot. Marshal to UI.
     public event Action? Changed;
+    /// <summary>Successful state-changing operation; never a query or rejected request.</summary>
+    public event Action? MutationSucceeded;
+    internal void ReportMutationSucceeded()
+    {
+        foreach (Action handler in MutationSucceeded?.GetInvocationList() ?? [])
+            try { handler(); } catch { }
+    }
     internal void Connection(bool enabled, bool available, bool connected, string? error = null)
     {
         lock (gate)

@@ -94,12 +94,10 @@ jobs:
           NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
         run: |
           $version = [string]([xml](Get-Content "Directory.Build.props")).Project.PropertyGroup.Version
-          $package = Get-ChildItem "artifacts/packages/Flamoris.Mcp.Core.$version.nupkg" |
-            Where-Object { $_.Name -notlike "*.snupkg" } |
-            Select-Object -First 1
-          if ($null -eq $package) {
-            throw "Expected Flamoris.Mcp.Core package was not produced."
+          foreach ($id in @('Flamoris.Mcp.Core', 'Flamoris.Mcp.Wpf')) {
+            $package = Get-Item "artifacts/packages/$id.$version.nupkg"
+            dotnet nuget push $package.FullName `
+              --source "https://api.nuget.org/v3/index.json" `
+              --api-key $env:NUGET_API_KEY
+            if ($LASTEXITCODE -ne 0) { throw "Failed to publish $id" }
           }
-          dotnet nuget push $package.FullName `
-            --source "https://api.nuget.org/v3/index.json" `
-            --api-key $env:NUGET_API_KEY
