@@ -1,3 +1,5 @@
+> Desktop connection UX is superseded by [the shared desktop contract](decisions/0004-shared-desktop-connection.md): use Flamoris.Mcp.Wpf, connected-only red/green, and a success acknowledgement rather than a cursor.
+
 # FLAMORIS MCP Implementation Rules
 
 Status: Project-wide implementation policy  

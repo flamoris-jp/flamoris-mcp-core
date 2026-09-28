@@ -47,11 +47,9 @@ The bridge and Core never load a project or create an editor session.
   forwards bounded stdio frames to the explicitly selected running host.
 - `assets/runtime`: canonical red/green status images and Chipsy activity sheet.
 
-Current package line: `Flamoris.Mcp.Core 1.1.0` from nuget.org.
-
-~~~xml
-<PackageReference Include="Flamoris.Mcp.Core" Version="1.1.0" />
-~~~
+This branch prepares `Flamoris.Mcp.Core` and `Flamoris.Mcp.Wpf` **1.2.0**.
+The new packages must be published from reviewed main before consumer PRs use ordinary
+NuGet restores. `Flamoris.Mcp.Core 1.1.0` remains the previously released baseline.
 
 Core references `Flamoris.Logging` 1.0.0 through NuGet. It does not vendor the DLL.
 The MCP protocol implementation uses official `ModelContextProtocol.Core` 2.2.0
@@ -80,13 +78,20 @@ revoke and shutdown ordering for desktop hosts that optionally manage a helper
 such as `tunnel-client`. It deliberately does not own provider settings, WPF UI,
 credential storage, grant creation or application policy.
 
-The copyable [WPF managed-connection sample](samples/wpf-managed-connection/README.md)
-records the current `tunnel-client v0.0.14` integration. It is reference source to
-copy and adapt, not a second production framework or an automatically installed
-provider. Cutwork is the first planned production adoption.
+`Flamoris.Mcp.Wpf` supplies one shared desktop subsystem: the three-action MCP / AI
+menu, localized connection confirmation and settings, Manual/OpenAI tunnel-client/Hub
+selection, current-user Windows Credential Manager integration, bottom-right connection
+indicator and centered 500 ms Chipsy acknowledgement. Auto-connect defaults OFF;
+settings keep the previous permission independently of the currently active grant.
 
-See [managed connections](docs/managed-connections.md) for the state model,
-responsibility boundary, configuration vocabulary and provider-extension rules.
+`HubConnectionProvider` uses outbound WSS and the existing host boundary. Registration,
+bounded retries, current-grant cancellation, schema description and request routing are
+shared. The Hub never receives the local capability and cannot bypass the host guard.
+See [the shared desktop contract](docs/decisions/0004-shared-desktop-connection.md).
+
+The older [managed-connection sample](samples/wpf-managed-connection/README.md) remains
+reference material; new FLAMORIS consumers use the shared production packages instead
+of copying the sample. Product commands and session authority stay in each application.
 
 ## Settings vocabulary
 
@@ -106,8 +111,8 @@ named-pipe attachment, not a bridge-owned editing process.
 Managed helper preferences use `mcp.connection.method`,
 `mcp.connection.autoStart`, and provider-owned keys below
 `mcp.connection.providers.<providerId>.*`. Secret values and transient MCP
-capabilities are not settings. UI labels, provider dropdowns and secure credential
-references remain application-owned.
+capabilities are not settings. UI labels and provider dropdowns are shared by `Flamoris.Mcp.Wpf`; application identity
+and the platform credential target remain explicit host inputs.
 
 ## Build and test
 

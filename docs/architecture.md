@@ -69,8 +69,13 @@ shutdown revoke the grant before stopping the owned provider helper.
 
 ## UI projection
 
-`StatusProjection` is UI neutral. Green means enabled endpoint available; red means
-unavailable. `Connected` separately indicates an authenticated bridge. Foreground
-activity is reference-counted and cleared on endpoint loss. Background context and
-health work does not flash the activity cursor. Application UI owns rendering,
-thread marshaling, cursor restoration and accessible text.
+`StatusProjection.IsGreen` requires an authenticated/registered connection, not just a
+listening local endpoint. `MutationSucceeded` acknowledges successful state-changing
+operations only. Queries and failures do not trigger Chipsy. The WPF package owns the
+single bottom-right indicator and a centered, hit-test-disabled 500 ms acknowledgement.
+It never changes the mouse cursor. Core retains its UI-framework-neutral boundary.
+
+Production tunnel infrastructure previously duplicated in Cutwork is now under
+`Flamoris.Mcp.Core.Connections`. Shared UI consumes it and `HubConnectionProvider`.
+Host adapters provide only boundary/grant creation, readiness, authority invalidation,
+product settings/credential identity and (for 2D) Product Host lease cleanup.

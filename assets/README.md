@@ -7,8 +7,8 @@ PSD, contact sheets, look-direction previews and pet metadata are not runtime in
 
 Use mcp-status-green_{16,20,24,32}.png when Status.Current.IsGreen, otherwise red.
 Choose the closest supplied pixel size for DPI; preserve transparency/aspect ratio.
-Green means endpoint available, not proof of a particular AI identity. Connected
-separately indicates an authenticated bridge. Always provide accessible status text.
+Green now requires an actual authenticated bridge or registered Hub connection; it
+does not identify a particular AI. Always provide accessible status text.
 
 For meaningful foreground activity, host code can decode chipsy-activity.webp
 (1536×2288 RGBA, 8 columns × 11 rows, each 192×208). Use row 7 (running),
@@ -28,3 +28,12 @@ Supplied FLAMORIS artwork for this integration. Permission to include/reuse thes
 runtime images in FLAMORIS hosts comes from the task's explicit asset instructions.
 Non-code artwork is not automatically Apache-2.0; no broader redistribution license
 is asserted here. The code's Apache-2.0 license is unchanged.
+
+## Shared WPF acknowledgement
+
+The original runtime assets above remain byte-identical. The WPF package embeds a
+losslessly decoded PNG rendering frame at `src/Flamoris.Mcp.Wpf/Assets/chipsy-acknowledgement.png`,
+from row 7, column 0 (192 by 208), for Windows without an optional WebP codec.
+It displays at 48 DIP (roughly 200% of Cutwork's tool glyph), centered for 500 ms
+after successful connection or state-changing AI operations. This supersedes the
+old cursor policy above for desktop consumers; the source sprite sheet is unchanged.

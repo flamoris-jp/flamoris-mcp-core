@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <PackageId>Flamoris.Mcp.Wpf</PackageId>
+    <Description>Shared FLAMORIS desktop MCP connection UI.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Flamoris.Mcp.Core/Flamoris.Mcp.Core.csproj" />
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <Resource Include="../../assets/runtime/mcp-status-*_20.png" Link="Assets/%(Filename)%(Extension)" />
+    <Resource Include="Assets/chipsy-acknowledgement.png" />
+  </ItemGroup>
+</Project>

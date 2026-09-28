@@ -131,7 +131,17 @@ public sealed class McpBoundary : IDisposable
         else { deadline.Dispose(); admission.Release(); }
         Diagnostics.Event(tool.Kind == OperationKind.Query ? "mcp.query" : "mcp.command",
             result.Error ?? "success", tool.Name, (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        if (!result.IsError && tool.Kind != OperationKind.Query) Status.ReportMutationSucceeded();
         return result;
+    }
+    /// <summary>Stable tool schemas for a reviewed Hub catalog; contains no credentials or document data.</summary>
+    public JsonElement DescribeCatalog()
+    {
+        var tools = Tools.Values.Select(McpProtocol.Describe).Select(t => new {
+            name = t.Name, description = t.Description ?? "", input_schema = t.InputSchema }).ToList();
+        tools.Insert(0, new { name = "mcp.context", description = "Current live identity, revision and permission.",
+            input_schema = JsonSerializer.SerializeToElement(new { type = "object", properties = new {}, additionalProperties = false }) });
+        return JsonSerializer.SerializeToElement(tools);
     }
     public void Dispose()
     {

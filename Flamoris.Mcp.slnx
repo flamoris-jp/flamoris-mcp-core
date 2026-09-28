@@ -3,4 +3,5 @@
   <Project Path="src/Flamoris.Mcp.Bridge/Flamoris.Mcp.Bridge.csproj" />
   <Project Path="samples/wpf-managed-connection/Flamoris.Mcp.WpfManagedConnection.Sample.csproj" />
   <Project Path="tests/Flamoris.Mcp.Tests/Flamoris.Mcp.Tests.csproj" />
+  <Project Path="src/Flamoris.Mcp.Wpf/Flamoris.Mcp.Wpf.csproj" />
 </Solution>
