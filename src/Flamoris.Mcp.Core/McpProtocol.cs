@@ -117,7 +117,7 @@ internal static class McpProtocol
             : result.Value ?? JsonSerializer.SerializeToElement(new {});
         var content = new List<ContentBlock> { new TextContentBlock { Text = value.GetRawText() } };
         if (!result.IsError && result.Image is { } image)
-            content.Add(new ImageContentBlock { MimeType = image.MimeType, Data = image.Bytes });
+            content.Add(ImageContentBlock.FromBytes(image.Bytes, image.MimeType));
         return new() { IsError = result.IsError, StructuredContent = value, Content = content };
     }
 }

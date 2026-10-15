@@ -40,9 +40,9 @@ public sealed class TransportTests
             Assert.IsFalse(reply.IsError == true);
             var image = reply.Content.OfType<ImageContentBlock>().Single();
             Assert.AreEqual("image/png", image.MimeType);
-            CollectionAssert.AreEqual(png, image.Data.ToArray());
+            CollectionAssert.AreEqual(png, image.DecodedData.ToArray());
             Assert.AreEqual(1, reply.StructuredContent!.Value.GetProperty("width").GetInt32());
-            Assert.IsFalse(reply.StructuredContent.Value.GetRawText().Contains(Convert.ToBase64String(image.Data.Span)));
+            Assert.IsFalse(reply.StructuredContent.Value.GetRawText().Contains(Convert.ToBase64String(image.DecodedData.Span)));
         }
         finally { lifetime.Cancel(); await serving.WaitAsync(TimeSpan.FromSeconds(5)); }
         using var small = host.Boundary(new() { MaxRequestBytes = 1024 }, [tool]);
