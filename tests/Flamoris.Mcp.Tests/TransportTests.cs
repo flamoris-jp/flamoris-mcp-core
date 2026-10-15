@@ -5,6 +5,7 @@ using System.Threading.Channels;
 using Flamoris.Mcp.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 namespace Flamoris.Mcp.Tests;
 
@@ -21,6 +22,36 @@ public sealed class TransportTests
             InheritEnvironmentVariables = true, ShutdownTimeout = TimeSpan.FromSeconds(5),
         });
     }
+    [TestMethod]
+    public async Task ImageSurvivesPublishedBridgeWithMetadataAndBounds()
+    {
+        var host = new HostHarness();
+        byte[] png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9xkAAAAASUVORK5CYII=");
+        var tool = new HostImageTool<JsonElement>("frame", "Synthetic image transport fixture", HostHarness.Json(new { type = "object" }),
+            v => v, async (context, _, token) => new McpResult(await context.ReadAsync(() => HostHarness.Json(new { width = 1, revision = "0" }))) { Image = new("image/png", png) });
+        using var core = host.Boundary(extra: [tool]);
+        using var grant = await core.EnableAsync(McpPermission.ReadOnly);
+        using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var serving = new LocalMcpEndpoint(core).RunAsync(grant, lifetime.Token);
+        try
+        {
+            await using var client = await McpClient.CreateAsync(Transport(core, grant.ExportCredential()), cancellationToken: lifetime.Token);
+            var reply = await client.CallToolAsync("frame", new Dictionary<string, object?> { ["input"] = new { } }, cancellationToken: lifetime.Token);
+            Assert.IsFalse(reply.IsError == true);
+            var image = reply.Content.OfType<ImageContentBlock>().Single();
+            Assert.AreEqual("image/png", image.MimeType);
+            CollectionAssert.AreEqual(png, image.DecodedData.ToArray());
+            Assert.AreEqual(1, reply.StructuredContent!.Value.GetProperty("width").GetInt32());
+            Assert.IsFalse(reply.StructuredContent.Value.GetRawText().Contains(Convert.ToBase64String(image.DecodedData.Span)));
+        }
+        finally { lifetime.Cancel(); await serving.WaitAsync(TimeSpan.FromSeconds(5)); }
+        using var small = host.Boundary(new() { MaxRequestBytes = 1024 }, [tool]);
+        using var smallGrant = await small.EnableAsync(McpPermission.ReadOnly);
+        Assert.AreEqual("response_too_large", (await small.InvokeAsync(smallGrant, "frame", HostHarness.Json(new { }), null)).Error);
+        Assert.ThrowsException<ArgumentException>(() => new McpImage("image/png", new byte[McpImage.MaximumBytes + 1]));
+        Assert.ThrowsException<ArgumentException>(() => new McpImage("text/plain", png));
+    }
+
     [DataTestMethod]
     [DataRow("2026-07-28")]
     [DataRow("2025-03-26")]

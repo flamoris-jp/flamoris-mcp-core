@@ -2,6 +2,8 @@ name: Publish NuGet package
 
 on:
   push:
+    branches: [main]
+    paths: [Directory.Build.props]
     tags:
       - "v*.*.*"
   workflow_dispatch:
@@ -24,13 +26,13 @@ jobs:
         shell: pwsh
         run: |
           git fetch origin +refs/heads/main:refs/remotes/origin/main --no-tags
-          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+          if (-not "${{ github.ref }}".StartsWith("refs/tags/")) {
             if ("${{ github.ref }}" -ne "refs/heads/main") {
-              throw "Manual package publishing must run from main."
+              throw "Branch/manual package publishing must run from main."
             }
             $mainSha = (git rev-parse origin/main).Trim()
             if ($env:GITHUB_SHA -ne $mainSha) {
-              throw "Manual package publishing must run from the exact current main commit."
+              throw "Branch/manual package publishing must run from the exact current main commit."
             }
           }
           else {
@@ -51,7 +53,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($version)) {
             throw "Missing package version in Directory.Build.props."
           }
-          if ("${{ github.event_name }}" -eq "push") {
+          if ("${{ github.ref }}".StartsWith("refs/tags/")) {
             $tag = "${{ github.ref_name }}"
             $expected = "v" + $version
             if ($tag -ne $expected) {
@@ -59,7 +61,7 @@ jobs:
             }
           }
           else {
-            Write-Host "Manual publish of Flamoris.Mcp.Core $version from current main."
+            Write-Host "Version-bump/manual publish of Flamoris.Mcp.Core $version from current main."
           }
 
       - name: Restore

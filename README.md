@@ -181,3 +181,14 @@ transport、権限、live attach、revision/conflict、revocationなどの共通
 もしお役に立てたり、面白いと思っていただけたなら、開発費用をご支援いただけるとうれしいです。  
 FLAMORISは元気になって育ちます。🌱  
 <sub>主にGPU代とか。</sub>
+
+## Bounded image queries (1.3)
+
+`HostImageTool<T>` returns `McpResult` metadata plus an optional `McpImage`.
+Only read-only queries can use this adapter. `McpImage` owns one PNG/JPEG payload,
+1–1,048,576 bytes; it grants no file or network access. Existing `HostTool<T>`
+JSON behavior is unchanged. Pipe/stdio and outbound Hub serialize the same actual
+MCP image content block alongside text and structured metadata. Bytes are never
+copied into structuredContent. Custom smaller frame limits return
+`response_too_large` before transport writing. Existing authorization, disclosure
+revalidation, deadline, cancellation and grant revocation apply to image results.

@@ -67,6 +67,7 @@ public sealed class McpFault(string code) : Exception(code)
 
 public sealed record McpResult(JsonElement? Value = null, string? Error = null)
 {
+    public McpImage? Image { get; init; }
     public bool IsError => Error is not null;
     public static McpResult Failure(string code) => new(Error: code);
 }
@@ -89,7 +90,7 @@ public abstract class HostTool
     public JsonElement InputSchema { get; }
     public OperationKind Kind { get; }
     public bool Foreground { get; }
-    internal abstract Task<JsonElement> ExecuteAsync(RequestContext context, JsonElement input, CancellationToken token);
+    internal abstract Task<McpResult> ExecuteAsync(RequestContext context, JsonElement input, CancellationToken token);
 }
 
 public sealed class HostTool<T> : HostTool
@@ -100,7 +101,37 @@ public sealed class HostTool<T> : HostTool
         Func<JsonElement, T> decode, Func<RequestContext, T, CancellationToken, Task<JsonElement>> execute,
         bool foreground = true) : base(name, description, inputSchema, kind, foreground)
     { this.decode = decode; this.execute = execute; }
-    internal override Task<JsonElement> ExecuteAsync(RequestContext context, JsonElement input, CancellationToken token)
+    internal override async Task<McpResult> ExecuteAsync(RequestContext context, JsonElement input, CancellationToken token)
+    {
+        T value;
+        try { value = decode(input); }
+        catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or FormatException)
+        { throw new McpFault(McpErrors.InvalidRequest); }
+        return new(await execute(context, value, token));
+    }
+}
+
+/// <summary>One bounded, owned JPEG/PNG payload; never a path or filesystem grant.</summary>
+public sealed class McpImage
+{
+    public const int MaximumBytes = 1024 * 1024;
+    public string MimeType { get; }
+    public ReadOnlyMemory<byte> Bytes { get; }
+    public string Base64Data => Convert.ToBase64String(Bytes.Span);
+    public McpImage(string mimeType, ReadOnlySpan<byte> bytes)
+    {
+        if (mimeType is not ("image/png" or "image/jpeg") || bytes.Length is < 1 or > MaximumBytes)
+            throw new ArgumentException("Expected a bounded JPEG or PNG payload.");
+        MimeType = mimeType; Bytes = bytes.ToArray();
+    }
+}
+
+/// <summary>Read-only rich result. Authorization, final disclosure checks and deadlines stay in Core.</summary>
+public sealed class HostImageTool<T>(string name, string description, JsonElement inputSchema,
+    Func<JsonElement, T> decode, Func<RequestContext, T, CancellationToken, Task<McpResult>> execute)
+    : HostTool(name, description, inputSchema, OperationKind.Query, foreground: false)
+{
+    internal override Task<McpResult> ExecuteAsync(RequestContext context, JsonElement input, CancellationToken token)
     {
         T value;
         try { value = decode(input); }
