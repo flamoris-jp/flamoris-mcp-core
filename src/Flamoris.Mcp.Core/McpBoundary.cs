@@ -101,7 +101,7 @@ public sealed class McpBoundary : IDisposable
         var context = new RequestContext(host, attachment, guard, tool.Kind != OperationKind.Query,
             deadline.Token, Options.RequestTimeoutMs);
         using var activity = tool.Foreground && Options.ShowActivityCursor ? Status.BeginForeground() : null;
-        Task<JsonElement>? work = null;
+        Task<McpResult>? work = null;
         McpResult result;
         try
         {
@@ -114,7 +114,9 @@ public sealed class McpBoundary : IDisposable
                 if (tool.Kind == OperationKind.Query) await context.ValidateAsync();
                 return value;
             }, CancellationToken.None);
-            result = new(await work.WaitAsync(deadline.Token));
+            result = await work.WaitAsync(deadline.Token);
+            if (result.Image is not null && JsonSerializer.SerializeToUtf8Bytes(McpProtocol.ToWire(result)).Length > Options.MaxRequestBytes - 1024)
+                result = McpResult.Failure("response_too_large");
         }
         catch (OperationCanceledException)
         {

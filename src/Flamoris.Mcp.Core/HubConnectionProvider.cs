@@ -143,11 +143,8 @@ public sealed class HubConnectionProvider(HubConnectionSettings settings, McpBou
         catch (McpFault e) { result = McpResult.Failure(e.Code); }
         catch (OperationCanceledException) { result = McpResult.Failure(McpErrors.Cancelled); }
         catch { result = McpResult.Failure(McpErrors.InvalidRequest); }
-        // Explicit MCP wire names; never serialize framework implementation members.
-        JsonElement value = result.Error is { } code ? JsonSerializer.SerializeToElement(new { error = new { code } })
-            : result.Value ?? JsonSerializer.SerializeToElement(new { });
-        return new { isError = result.IsError, structuredContent = value,
-            content = new[] { new { type = "text", text = value.GetRawText() } } };
+        // Use the same SDK wire contract as the local pipe/stdio route, including images.
+        return McpProtocol.ToWire(result);
     }
 
     private static async Task Send(IHubSocket socket, object value, CancellationToken token)

@@ -90,6 +90,31 @@ public sealed class DesktopConnectionTests
         Assert.AreEqual(0, host.Commits);
         boundary.Disable(); await provider.StopAsync(default);
     }
+    [TestMethod]
+    public async Task HubForwardsActualImageBlockAndNeverDuplicatesBytesInMetadata()
+    {
+        var host = new HostHarness();
+        var image = new McpImage("image/jpeg", new byte[] { 255, 216, 255, 217 });
+        var tool = new HostImageTool<JsonElement>("frame", "Image transport", HostHarness.Json(new { type = "object" }), v => v,
+            async (context, _, token) => new McpResult(await context.ReadAsync(() => HostHarness.Json(new { width = 1 }))) { Image = image });
+        using var boundary = host.Boundary(extra: [tool]);
+        using var grant = await boundary.EnableAsync(McpPermission.ReadOnly);
+        var socket = new FakeSocket();
+        var provider = new HubConnectionProvider(new(new Uri("wss://hub.test/desktop/test")), boundary,
+            grant, _ => ValueTask.FromResult(new string('x', 32))) { SocketFactory = () => socket };
+        await provider.StartAsync(default);
+        using var registration = await socket.Next();
+        await socket.Push(new { type = "ready", version = 1 });
+        await socket.Push(new { type = "call", id = "frame-1", name = "frame", arguments = new { input = new { } } });
+        using var response = await socket.Next();
+        var result = response.RootElement.GetProperty("result");
+        var block = result.GetProperty("content")[1];
+        Assert.AreEqual("image", block.GetProperty("type").GetString());
+        Assert.AreEqual(image.Base64Data, block.GetProperty("data").GetString());
+        Assert.AreEqual("image/jpeg", block.GetProperty("mimeType").GetString());
+        Assert.AreEqual(1, result.GetProperty("structuredContent").GetProperty("width").GetInt32());
+        boundary.Disable(); await provider.StopAsync(default);
+    }
     private sealed class FakeSocket : IHubSocket
     {
         private readonly Channel<byte[]> input = Channel.CreateUnbounded<byte[]>();
