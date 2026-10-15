@@ -47,9 +47,10 @@ The bridge and Core never load a project or create an editor session.
   forwards bounded stdio frames to the explicitly selected running host.
 - `assets/runtime`: canonical red/green status images and Chipsy activity sheet.
 
-This branch prepares `Flamoris.Mcp.Core` and `Flamoris.Mcp.Wpf` **1.2.0**.
+This branch prepares `Flamoris.Mcp.Core` and `Flamoris.Mcp.Wpf` **1.3.1**.
 The new packages must be published from reviewed main before consumer PRs use ordinary
-NuGet restores. `Flamoris.Mcp.Core 1.1.0` remains the previously released baseline.
+NuGet restores. `Flamoris.Mcp.Core 1.3.0` is the previously released baseline;
+1.3.1 corrects Hub result serialization to match the official SDK options.
 
 Core references `Flamoris.Logging` 1.0.0 through NuGet. It does not vendor the DLL.
 The MCP protocol implementation uses official `ModelContextProtocol.Core` 2.2.0

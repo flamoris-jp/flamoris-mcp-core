@@ -16,6 +16,12 @@ permission and image-result serialization. A real deployed OpenAI tunnel plus Hu
 requires updating the application bundle and static catalog and is separate live
 acceptance; no production credentials are required by these deterministic tests.
 
+The Hub envelope uses `McpJsonUtilities.DefaultOptions`, just like the official
+SDK transport. Generic Web JSON options serialize the SDK's unset `resultType`
+as null, which Python MCP rejects before forwarding even `mcp.context`.
+Release 1.3.1 fixes this interoperability regression; regression tests cover
+ordinary context, errors and image responses with unset members omitted.
+
 Release 1.3.0 is published by the existing release workflow after a reviewed
 Directory.Build.props version bump reaches exact current main. Tag and manual
 release paths remain available; non-main branches cannot publish. Both packages

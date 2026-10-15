@@ -91,6 +91,34 @@ public sealed class DesktopConnectionTests
         boundary.Disable(); await provider.StopAsync(default);
     }
     [TestMethod]
+    public async Task HubContextAndErrorOmitUnsetSdkResultMembers()
+    {
+        var host = new HostHarness(); using var boundary = host.Boundary();
+        using var grant = await boundary.EnableAsync(McpPermission.ReadOnly);
+        var socket = new FakeSocket();
+        var provider = new HubConnectionProvider(new(new Uri("wss://hub.test/desktop/test")), boundary,
+            grant, _ => ValueTask.FromResult(new string('x', 32))) { SocketFactory = () => socket };
+        await provider.StartAsync(default);
+        using var registration = await socket.Next();
+        await socket.Push(new { type = "ready", version = 1 });
+        // Python MCP rejects resultType:null, even for an ordinary context read.
+        foreach (bool invalid in new[] { false, true })
+        {
+            await socket.Push(new { type = "call", id = invalid ? "bad" : "context", name = "mcp.context",
+                arguments = invalid ? HostHarness.Json(new { unexpected = true }) : HostHarness.Json(new { }) });
+            using var response = await socket.Next();
+            var result = response.RootElement.GetProperty("result");
+            Assert.AreEqual(invalid, result.GetProperty("isError").GetBoolean());
+            Assert.IsFalse(result.TryGetProperty("resultType", out _));
+            Assert.IsFalse(result.TryGetProperty("_meta", out _));
+            var text = result.GetProperty("content")[0];
+            Assert.AreEqual("text", text.GetProperty("type").GetString());
+            Assert.AreEqual(result.GetProperty("structuredContent").GetRawText(), text.GetProperty("text").GetString());
+        }
+        boundary.Disable(); await provider.StopAsync(default);
+        Assert.AreEqual(0, host.Commits);
+    }
+    [TestMethod]
     public async Task HubForwardsActualImageBlockAndNeverDuplicatesBytesInMetadata()
     {
         var host = new HostHarness();
@@ -108,6 +136,8 @@ public sealed class DesktopConnectionTests
         await socket.Push(new { type = "call", id = "frame-1", name = "frame", arguments = new { input = new { } } });
         using var response = await socket.Next();
         var result = response.RootElement.GetProperty("result");
+        Assert.IsFalse(result.TryGetProperty("resultType", out _));
+        Assert.IsFalse(result.TryGetProperty("_meta", out _));
         var block = result.GetProperty("content")[1];
         Assert.AreEqual("image", block.GetProperty("type").GetString());
         Assert.AreEqual(image.Base64Data, block.GetProperty("data").GetString());
