@@ -1,6 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using ModelContextProtocol;
 
 namespace Flamoris.Mcp.Core;
 
@@ -23,7 +24,9 @@ public sealed class HubConnectionProvider(HubConnectionSettings settings, McpBou
     private CancellationTokenSource? lifetime;
     private Task? worker;
     private const int MaxBytes = 4 * 1024 * 1024;
-    private static readonly JsonSerializerOptions Wire = new(JsonSerializerDefaults.Web);
+    // SDK result members include optional fields (for example resultType) whose
+    // absent/default value must be omitted, not sent as null to other MCP SDKs.
+    private static readonly JsonSerializerOptions Wire = McpJsonUtilities.DefaultOptions;
 
     public ValueTask StartAsync(CancellationToken cancellationToken)
     {
