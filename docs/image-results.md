@@ -15,3 +15,9 @@ PNG bytes/MIME/metadata and small-budget rejection, and exercise Hub registratio
 permission and image-result serialization. A real deployed OpenAI tunnel plus Hub
 requires updating the application bundle and static catalog and is separate live
 acceptance; no production credentials are required by these deterministic tests.
+
+Release 1.3.0 is published by the existing release workflow after a reviewed
+Directory.Build.props version bump reaches exact current main. Tag and manual
+release paths remain available; non-main branches cannot publish. Both packages
+are built/tested/smoke-checked before NuGet login. This avoids a consumer depending
+on a local-only package. No Kachinco CI checkout bypass is introduced.
