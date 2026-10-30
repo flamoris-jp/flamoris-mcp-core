@@ -47,10 +47,10 @@ The bridge and Core never load a project or create an editor session.
   forwards bounded stdio frames to the explicitly selected running host.
 - `assets/runtime`: canonical red/green status images and Chipsy activity sheet.
 
-This branch prepares `Flamoris.Mcp.Core` and `Flamoris.Mcp.Wpf` **1.3.1**.
+This branch prepares `Flamoris.Mcp.Core` and `Flamoris.Mcp.Wpf` **1.4.0**.
 The new packages must be published from reviewed main before consumer PRs use ordinary
 NuGet restores. `Flamoris.Mcp.Core 1.3.0` is the previously released baseline;
-1.3.1 corrects Hub result serialization to match the official SDK options.
+1.4 adds opt-in application-lifetime attachment; see [the contract](docs/application-lifetime.md).
 
 Core references `Flamoris.Logging` 1.0.0 through NuGet. It does not vendor the DLL.
 The MCP protocol implementation uses official `ModelContextProtocol.Core` 2.2.0
@@ -82,7 +82,7 @@ credential storage, grant creation or application policy.
 `Flamoris.Mcp.Wpf` supplies one shared desktop subsystem: the three-action MCP / AI
 menu, localized connection confirmation and settings, Manual/OpenAI tunnel-client/Hub
 selection, current-user Windows Credential Manager integration, bottom-right connection
-indicator and centered 500 ms Chipsy acknowledgement. Auto-connect defaults OFF;
+indicator and centered 500 ms Chipsy acknowledgement. New preferences connect automatically at startup using local read-only Manual mode; saved OFF remains an opt-out;
 settings keep the previous permission independently of the currently active grant.
 
 `HubConnectionProvider` uses outbound WSS and the existing host boundary. Registration,

@@ -82,7 +82,10 @@ public sealed class HubConnectionProvider(HubConnectionSettings settings, McpBou
         catalog.Insert(0, new { name = "mcp.context", inputSchema = JsonSerializer.SerializeToElement(
             new { type = "object", properties = new { }, additionalProperties = false }) });
         await Send(socket, new { type = "register", version = 1, productId = grant.Snapshot.ProductId,
-            runtimeId = grant.Snapshot.RuntimeId, documentToken = grant.Snapshot.DocumentToken,
+            runtimeId = grant.Snapshot.RuntimeId,
+            // Registration needs a nonempty opaque attachment identity before any document exists.
+            // Live targets/guards always come from mcp.context, never this registration field.
+            documentToken = string.IsNullOrWhiteSpace(grant.Snapshot.DocumentToken) ? grant.Snapshot.RuntimeId : grant.Snapshot.DocumentToken,
             permission = grant.Permission == McpPermission.Edit ? "edit" : "readOnly", tools = catalog }, attempt.Token).ConfigureAwait(false);
         using var ready = await Receive(socket, attempt.Token).ConfigureAwait(false);
         if (ready.RootElement.GetProperty("type").GetString() != "ready"

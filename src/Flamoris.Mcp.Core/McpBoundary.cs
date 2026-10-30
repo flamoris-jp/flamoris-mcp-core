@@ -39,10 +39,10 @@ public sealed class McpBoundary : IDisposable
                 ObjectDisposedException.ThrowIf(disposed, this);
                 if (expected != generation) throw new McpFault(McpErrors.StaleSession);
                 var snapshot = host.Snapshot;
-                if (!snapshot.Available || string.IsNullOrWhiteSpace(snapshot.DocumentToken))
+                if (!snapshot.Available || (!Options.ApplicationLifetime && string.IsNullOrWhiteSpace(snapshot.DocumentToken)))
                     throw new McpFault(McpErrors.HostUnavailable);
                 grant?.Revoke();
-                grant = new(snapshot, permission); generation++;
+                grant = new(snapshot, permission, Options.ApplicationLifetime); generation++;
                 Status.Connection(true, false, false);
                 Diagnostics.Event("mcp.auth", "enabled");
                 return grant;
@@ -76,12 +76,12 @@ public sealed class McpBoundary : IDisposable
                 var snapshot = host.Snapshot;
                 if (!snapshot.Available) throw new McpFault(McpErrors.HostUnavailable);
                 if (snapshot.RuntimeId != attachment.Snapshot.RuntimeId) throw new McpFault(McpErrors.StaleSession);
-                if (snapshot.DocumentToken != attachment.Snapshot.DocumentToken) throw new McpFault(McpErrors.StaleDocument);
+                if (!attachment.ApplicationLifetime && snapshot.DocumentToken != attachment.Snapshot.DocumentToken) throw new McpFault(McpErrors.StaleDocument);
                 return JsonSerializer.SerializeToElement(new {
                     productId = snapshot.ProductId, applicationVersion = snapshot.ApplicationVersion,
                     runtimeId = snapshot.RuntimeId, documentToken = snapshot.DocumentToken,
                     revision = snapshot.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    available = snapshot.Available, busy = snapshot.HumanEditing,
+                    available = snapshot.Available, hasDocument = snapshot.HasDocument, busy = snapshot.HumanEditing,
                     permission = attachment.Permission == McpPermission.Edit ? "edit" : "readOnly",
                 });
             }
@@ -99,7 +99,7 @@ public sealed class McpBoundary : IDisposable
         var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, attachment.Revoked);
         deadline.CancelAfter(Options.RequestTimeoutMs);
         var context = new RequestContext(host, attachment, guard, tool.Kind != OperationKind.Query,
-            deadline.Token, Options.RequestTimeoutMs);
+            deadline.Token, Options.RequestTimeoutMs, tool.RequiresDocument);
         using var activity = tool.Foreground && Options.ShowActivityCursor ? Status.BeginForeground() : null;
         Task<McpResult>? work = null;
         McpResult result;

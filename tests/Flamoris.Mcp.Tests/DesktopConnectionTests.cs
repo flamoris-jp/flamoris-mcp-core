@@ -10,10 +10,10 @@ namespace Flamoris.Mcp.Tests;
 public sealed class DesktopConnectionTests
 {
     [TestMethod]
-    public void DefaultsAreManualReadonlyAndNoAutomaticConnection()
+    public void DefaultsAreManualReadonlyAndAutomaticApplicationConnection()
     {
         var settings = new DesktopConnectionSettings();
-        Assert.IsFalse(settings.AutoConnect);
+        Assert.IsTrue(settings.AutoConnect);
         Assert.AreEqual(McpPermission.ReadOnly, settings.Permission);
         Assert.AreEqual(DesktopConnectionMethod.Manual, settings.Method);
         Assert.IsFalse((settings with { AutoConnect = true }).RequiresReconnect(settings));
@@ -44,10 +44,13 @@ public sealed class DesktopConnectionTests
             Assert.ThrowsException<ArgumentException>(() => new HubConnectionSettings(new(uri)).Validate());
         new HubConnectionSettings(new("wss://host/desktop/app")).Validate();
     }
-    [TestMethod]
-    public async Task HubRegistersAndDispatchesThroughCurrentBoundaryThenRevokes()
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task HubRegistersAndDispatchesThroughCurrentBoundaryThenRevokes(bool emptyStartup)
     {
-        var host = new HostHarness(); using var boundary = host.Boundary();
+        var host = new HostHarness(); if (emptyStartup) host.Document(false);
+        using var boundary = host.Boundary(new() { ApplicationLifetime = emptyStartup });
         using var grant = await boundary.EnableAsync(McpPermission.Edit);
         var socket = new FakeSocket();
         var provider = new HubConnectionProvider(new(new Uri("wss://hub.test/desktop/test")), boundary,
@@ -56,6 +59,8 @@ public sealed class DesktopConnectionTests
         using var register = await socket.Next();
         Assert.AreEqual("register", register.RootElement.GetProperty("type").GetString());
         Assert.AreEqual(grant.Snapshot.RuntimeId, register.RootElement.GetProperty("runtimeId").GetString());
+        Assert.IsFalse(string.IsNullOrWhiteSpace(register.RootElement.GetProperty("documentToken").GetString()));
+        if (emptyStartup) host.Document(true);
         Assert.IsFalse(register.RootElement.GetRawText().Contains(grant.ExportCredential()));
         Assert.IsFalse(boundary.Status.Current.IsGreen);
         await socket.Push(new { type = "ready", version = 1 });
