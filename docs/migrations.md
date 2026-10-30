@@ -1,5 +1,7 @@
 # Consumer migration mapping
 
+> Historical migration mapping. Current desktop consumers use Core/Wpf 1.4.0 and [application lifetime](application-lifetime.md), preserving MCP across document changes. FLAMORIS 2D now uses its native C++ workspace rather than the former Node Product Host. Owning repositories define their accepted current adapters.
+
 Production migrations belong in separate consumer repository Issues/PRs. These
 mappings prove the Core boundary without moving application domain code here.
 

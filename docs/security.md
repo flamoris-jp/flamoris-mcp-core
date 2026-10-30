@@ -30,10 +30,14 @@ network tool or generic eval in Core.
 
 ## Revocation
 
-Disable, permission change, application restart, authority replacement and
-document replacement rotate/revoke the capability. The host must publish
-`Invalidating` before installing replacement authority. Existing requests share
-the revocation token and recheck it at the commit boundary.
+Disable, permission change, application restart, runtime/authority replacement and
+shutdown rotate/revoke the capability. Legacy document-scoped hosts publish
+`Invalidating` before document replacement. With `ApplicationLifetime = true`,
+ordinary document changes preserve the runtime grant, rotate target tokens and
+reject stale guards/pending results. `Invalidating` then means runtime loss or full
+access revocation. Content withdrawal is independently enforced by host consent
+epochs through final disclosure. See [application lifetime](application-lifetime.md).
+Existing requests share revocation and recheck authority at read/commit/disclosure.
 
 `ManagedConnectionLifecycle.DisableAsync` and `ShutdownAsync` invoke the host
 revoke callback before provider cleanup. Once cleanup begins, cancellation does not

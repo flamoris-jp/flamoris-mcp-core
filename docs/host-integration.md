@@ -1,5 +1,7 @@
 # Host integration
 
+> Choose the lifetime first: the replacement example below describes legacy document-scoped defaults. For startup connection opt into [application lifetime](application-lifetime.md), expose `HasDocument` independently of `Available`, and do not fire `Invalidating` on ordinary document changes. Bind content consent with `RequestContext.BindDisclosureAsync` when applicable.
+
 ## Implement the facade
 
 Wrap the existing session; do not construct one in the adapter. `Snapshot` exposes
@@ -50,9 +52,9 @@ Subscribe to `Status.Changed`, marshal to the UI thread, then reread
 text but does not identify an AI. Show only `LastError` codes mapped to localized,
 user-safe messages.
 
-While `ActivityVisible`, select the documented Chipsy runtime frame/animation.
-When it becomes false, restore the cursor appropriate to the current host tool.
-Always restore on success, failure, cancel, timeout, disconnect and shutdown.
+The shared WPF UI displays a centered 500 ms Chipsy acknowledgement after connection
+or successful mutation. Do not replace the host tool cursor or show query/failure
+activity as a successful edit acknowledgement.
 
 See `assets/README.md` for canonical asset coordinates and DPI guidance.
 

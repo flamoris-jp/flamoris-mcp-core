@@ -126,7 +126,8 @@ No generic YAML shape is inferred from this one provider.
 
 ## First production adoption
 
-Cutwork supplies the initial real-world requirements and is the first planned
-production adoption. It currently exposes a manually copied bridge configuration
-over `Flamoris.Mcp.Core 1.0.1`. The Core 1.1 sample does not modify Cutwork.
-See the [focused follow-up proposal](cutwork-managed-connection-follow-up.md).
+Cutwork supplied the initial production requirements. Cutwork, 2D and Kachinco now
+consume shared Core/Wpf 1.4.0 connection UI/providers; their owning repositories
+define product authority. See [application lifetime](application-lifetime.md) for
+current startup policy. The [original follow-up proposal](cutwork-managed-connection-follow-up.md)
+is retained as historical adoption context.
