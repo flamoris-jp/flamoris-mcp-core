@@ -4,8 +4,8 @@ FLAMORIS applications should consume MCP Core as a NuGet package. Do not vendor 
 
 ## Package
 
-- Package ID: `Flamoris.Mcp.Core`
-- Current version: `1.1.0`
+- Package IDs: `Flamoris.Mcp.Core` and `Flamoris.Mcp.Wpf` (desktop UI)
+- Current version: `1.4.0`
 - Target framework: `.NET 10`
 - Feed: `https://api.nuget.org/v3/index.json`
 
@@ -19,7 +19,7 @@ Reference the stable package normally:
 
 ~~~xml
 <ItemGroup>
-  <PackageReference Include="Flamoris.Mcp.Core" Version="1.1.0" />
+  <PackageReference Include="Flamoris.Mcp.Core" Version="1.4.0" />
 </ItemGroup>
 ~~~
 
@@ -59,13 +59,14 @@ steps:
 
 ## Publishing a new version
 
-Publishing is normally tag-driven.
+Publishing runs when a reviewed version bump reaches the exact current `main`.
+Matching version tags and guarded manual dispatch are also supported.
 
 1. Update `<Version>` in `Directory.Build.props`.
 2. Merge the reviewed release change to `main`.
-3. Create the exact matching tag, for example `v1.1.1`.
+3. Create the exact matching tag, for example `v1.4.0`.
 4. The publish workflow verifies that the tag belongs to reviewed `main` history and matches the package version.
-5. The workflow restores, builds, produces the self-contained bridge, runs the official-client transport tests, performs deterministic/package smoke checks, obtains a short-lived nuget.org API key through Trusted Publishing (GitHub Actions OIDC), and pushes `Flamoris.Mcp.Core` to nuget.org.
+5. The workflow restores, builds, produces the self-contained bridge, runs the official-client transport tests, performs deterministic/package smoke checks, obtains a short-lived nuget.org API key through Trusted Publishing (GitHub Actions OIDC), and pushes `Flamoris.Mcp.Core` and `Flamoris.Mcp.Wpf` to nuget.org.
 
 The workflow also supports a guarded manual dispatch from the exact current `main` commit for feed migration or release recovery. Normal releases should use matching version tags.
 

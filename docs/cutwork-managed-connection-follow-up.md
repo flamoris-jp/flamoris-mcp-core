@@ -1,5 +1,7 @@
 # Proposed Cutwork follow-up: adopt managed MCP connection sample
 
+> Historical Core 1.1 adoption proposal, subsequently implemented in Cutwork. Current production uses Core/Wpf 1.4.0 and [application-lifetime startup](application-lifetime.md); the old document-replacement revocation and planned-adoption statements below are historical, not current setup instructions.
+
 This is the focused application-side work identified by MCP Core Issue #6. It is
 not implemented in the Core repository.
 

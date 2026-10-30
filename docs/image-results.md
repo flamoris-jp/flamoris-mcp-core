@@ -22,7 +22,7 @@ as null, which Python MCP rejects before forwarding even `mcp.context`.
 Release 1.3.1 fixes this interoperability regression; regression tests cover
 ordinary context, errors and image responses with unset members omitted.
 
-Release 1.3.0 is published by the existing release workflow after a reviewed
+Core/Wpf 1.4.0 is published; the existing release workflow runs after a reviewed
 Directory.Build.props version bump reaches exact current main. Tag and manual
 release paths remain available; non-main branches cannot publish. Both packages
 are built/tested/smoke-checked before NuGet login. This avoids a consumer depending

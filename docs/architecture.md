@@ -55,9 +55,12 @@ metadata. It never returns a credential, document body or application payload.
 
 ## Lifecycle
 
-- Explicit enable creates a 256-bit grant bound to current product/runtime/document.
+- Enable creates a 256-bit grant bound to product/runtime and, by default, document.
+  `ApplicationLifetime = true` opts into a runtime grant independent of document presence.
 - Permission changes are disable plus fresh enable.
-- Disable, pre-replacement invalidation and shutdown revoke immediately.
+- Disable and shutdown revoke immediately. Legacy document-scoped grants also revoke
+  on pre-replacement invalidation. Opted-in hosts keep the grant through document
+  changes, rotate target tokens and reject stale requests; see [application lifetime](application-lifetime.md).
 - Pipe disconnect changes availability only; it does not replace application state.
 - Reconnect attaches to the same grant and existing session while it remains valid.
 - Application restart creates a new runtime and grant.

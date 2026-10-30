@@ -47,10 +47,9 @@ The bridge and Core never load a project or create an editor session.
   forwards bounded stdio frames to the explicitly selected running host.
 - `assets/runtime`: canonical red/green status images and Chipsy activity sheet.
 
-This branch prepares `Flamoris.Mcp.Core` and `Flamoris.Mcp.Wpf` **1.4.0**.
-The new packages must be published from reviewed main before consumer PRs use ordinary
-NuGet restores. `Flamoris.Mcp.Core 1.3.0` is the previously released baseline;
-1.4 adds opt-in application-lifetime attachment; see [the contract](docs/application-lifetime.md).
+`Flamoris.Mcp.Core` and `Flamoris.Mcp.Wpf` **1.4.0** are published on nuget.org.
+Consumers use ordinary public NuGet restore. Version 1.4 adds opt-in
+application-lifetime attachment; see [the contract](docs/application-lifetime.md).
 
 Core references `Flamoris.Logging` 1.0.0 through NuGet. It does not vendor the DLL.
 The MCP protocol implementation uses official `ModelContextProtocol.Core` 2.2.0
@@ -67,7 +66,10 @@ consumer CI, bridge packaging, and the tag-driven release contract.
    `LocalMcpEndpoint` with the returned transient grant.
 4. Launch the packaged bridge with `--pipe <name>` and pass the capability only
    through `FLAMORIS_MCP_CAPABILITY`; the bridge removes it from its environment.
-5. Revoke before document/session replacement and shutdown via `Invalidating`.
+5. Choose the grant lifetime. Legacy document-scoped hosts revoke on replacement.
+   With `ApplicationLifetime = true`, document changes update target tokens while
+   preserving the connection; `Invalidating` revokes on runtime loss/full access
+   withdrawal/shutdown. Content consent remains host-owned and independent.
 
 See [host integration](docs/host-integration.md), [architecture](docs/architecture.md)
 and [security](docs/security.md). Consumer migrations remain separate PRs.

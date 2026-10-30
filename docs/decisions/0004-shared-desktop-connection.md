@@ -20,13 +20,13 @@ Hub keeps a pinned superset and rejects unavailable calls.
 
 UI: MCP / AI -> Connect..., Stop, Settings... (Japanese/English shared strings).
 Manual connects confirm the selected method and previous permission every time.
-Auto-connect defaults OFF. Saved permission changes prompt to reconnect; declining
+New preferences auto-connect locally read-only at application startup; saved OFF remains OFF. Saved permission changes prompt to reconnect; declining
 keeps the live grant unchanged. Red/green means disconnected/connected, shown only at
 bottom right. Chipsy appears centered for 500 ms after connection or successful
 mutation, 48 DIP (twice Cutwork's 24 DIP tool icon), hit-test disabled, no cursor change.
 
-Package release order: Core/Wpf 1.2.0, then three consumer migrations. Source-root
-build overrides permit review of consumers against the exact unpublished Core commit.
+Current packages: published Core/Wpf 1.4.0, consumed with ordinary NuGet restore.
+The earlier 1.2 migration/source-root overrides are historical rollout details.
 Physical Windows appearance and real desktop-to-Hub deployment require hands-on QA.
 
 
