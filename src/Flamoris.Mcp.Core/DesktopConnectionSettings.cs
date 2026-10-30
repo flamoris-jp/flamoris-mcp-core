@@ -11,7 +11,7 @@ public sealed record DesktopConnectionSettings
 {
     public DesktopConnectionMethod Method { get; init; }
     public McpPermission Permission { get; init; } = McpPermission.ReadOnly;
-    public bool AutoConnect { get; init; }
+    public bool AutoConnect { get; init; } = true;
     public string TunnelClientExecutable { get; init; } = "";
     public string ProfileDirectory { get; init; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "tunnel-client");

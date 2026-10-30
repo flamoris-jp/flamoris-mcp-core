@@ -10,8 +10,9 @@ public sealed class CapabilityGrant : IDisposable
     private readonly byte[] secret = RandomNumberGenerator.GetBytes(32);
     private readonly CancellationTokenSource revoked = new();
     private bool active = true;
-    internal CapabilityGrant(HostSnapshot snapshot, McpPermission permission)
-    { Snapshot = snapshot; Permission = permission; }
+    internal CapabilityGrant(HostSnapshot snapshot, McpPermission permission, bool applicationLifetime = false)
+    { Snapshot = snapshot; Permission = permission; ApplicationLifetime = applicationLifetime; }
+    internal bool ApplicationLifetime { get; }
     public HostSnapshot Snapshot { get; }
     public McpPermission Permission { get; }
     public CancellationToken Revoked => revoked.Token;

@@ -28,3 +28,6 @@ mutation, 48 DIP (twice Cutwork's 24 DIP tool icon), hit-test disabled, no curso
 Package release order: Core/Wpf 1.2.0, then three consumer migrations. Source-root
 build overrides permit review of consumers against the exact unpublished Core commit.
 Physical Windows appearance and real desktop-to-Hub deployment require hands-on QA.
+
+
+Application-lifetime startup/consent policy is updated by [the 1.4 contract](../application-lifetime.md). Existing saved AutoConnect=false remains an opt-out.

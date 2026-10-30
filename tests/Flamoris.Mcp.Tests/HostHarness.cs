@@ -16,13 +16,15 @@ internal sealed class HostHarness(string productId = "flamoris.kachinco") : IMcp
     public event Action? Invalidating;
     public Task<T> InvokeAsync<T>(Func<T> action, CancellationToken token)
     { lock (lane) { token.ThrowIfCancellationRequested(); return Task.FromResult(action()); } }
-    public void Replace()
+    public void Replace(bool revoke = true)
     {
         lock (lane) {
-            Invalidating?.Invoke();
+            if (revoke) Invalidating?.Invoke();
             Snapshot = Snapshot with { DocumentToken = Guid.NewGuid().ToString(), Revision = Snapshot.Revision + 1 };
         }
     }
+    public void Document(bool present)
+    { lock (lane) Snapshot = Snapshot with { HasDocument = present, DocumentToken = present ? Guid.NewGuid().ToString() : "" }; }
     public void Busy(bool busy) { lock (lane) Snapshot = Snapshot with { HumanEditing = busy }; }
     public void Restart()
     { lock (lane) { Invalidating?.Invoke(); Snapshot = Snapshot with { RuntimeId = Guid.NewGuid().ToString() }; } }

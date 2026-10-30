@@ -12,16 +12,26 @@ public sealed class RequestContext
     private readonly CancellationToken token;
     private readonly long started = Stopwatch.GetTimestamp();
     private readonly int timeoutMs;
+    private readonly bool requiresDocument;
+    private string? requestDocument;
+    private readonly List<Action> disclosureChecks = [];
     private bool sealedRequest;
     private McpResult? committed;
     internal RequestContext(IMcpHost host, CapabilityGrant grant, RequestGuard? guard,
-        bool mutation, CancellationToken token, int timeoutMs)
-    { this.host = host; this.grant = grant; this.guard = guard; this.mutation = mutation; this.token = token; this.timeoutMs = timeoutMs; }
+        bool mutation, CancellationToken token, int timeoutMs, bool requiresDocument = true)
+    { this.host = host; this.grant = grant; this.guard = guard; this.mutation = mutation; this.token = token; this.timeoutMs = timeoutMs; this.requiresDocument = requiresDocument; }
 
     // Host operations run here on the SAME serialization lane as human gestures.
     public Task<JsonElement> ReadAsync(Func<JsonElement> query) => host.InvokeAsync(() =>
     {
         lock (grant.Gate) { Demand(); return query(); }
+    }, token);
+
+    // Bind host-owned content consent/epoch to every later read and final disclosure check.
+    // No content or permission state is owned by Core.
+    public Task BindDisclosureAsync(Action validate) => host.InvokeAsync(() =>
+    {
+        lock (grant.Gate) { Demand(); validate(); disclosureChecks.Add(validate); return true; }
     }, token);
 
     // Exactly one synchronous, atomic host transaction/history operation per request.
@@ -49,7 +59,13 @@ public sealed class RequestContext
         if (!current.Available) throw new McpFault(McpErrors.HostUnavailable);
         if (current.RuntimeId != grant.Snapshot.RuntimeId || current.ProductId != grant.Snapshot.ProductId)
             throw new McpFault(McpErrors.StaleSession);
-        if (current.DocumentToken != grant.Snapshot.DocumentToken) throw new McpFault(McpErrors.StaleDocument);
+        if (!grant.ApplicationLifetime && current.DocumentToken != grant.Snapshot.DocumentToken) throw new McpFault(McpErrors.StaleDocument);
+        if (requiresDocument)
+        {
+            if (!current.HasDocument || string.IsNullOrWhiteSpace(current.DocumentToken)) throw new McpFault(McpErrors.NoDocument);
+        }
+        requestDocument ??= current.DocumentToken;
+        if (current.DocumentToken != requestDocument) throw new McpFault(McpErrors.StaleDocument);
         if (guard is not null)
         {
             if (guard.RuntimeId != current.RuntimeId) throw new McpFault(McpErrors.StaleSession);
@@ -58,7 +74,8 @@ public sealed class RequestContext
         }
         if (mutation && (grant.Permission != McpPermission.Edit)) throw new McpFault(McpErrors.Forbidden);
         if (mutation && guard?.ExpectedRevision is null) throw new McpFault(McpErrors.InvalidRequest);
-        if (current.HumanEditing) throw new McpFault(McpErrors.Busy);
+        foreach (var validate in disclosureChecks) validate();
+        if (requiresDocument && current.HumanEditing) throw new McpFault(McpErrors.Busy);
     }
     internal Task ValidateAsync() => host.InvokeAsync(() => { lock (grant.Gate) Demand(); return true; }, token);
     internal McpResult Finish(McpResult result)

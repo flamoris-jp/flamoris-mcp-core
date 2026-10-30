@@ -8,7 +8,10 @@ public enum OperationKind { Query, Mutation, Undo, Redo, Transaction }
 
 // Values come from the live authority. Core never increments Revision.
 public sealed record HostSnapshot(string ProductId, string ApplicationVersion, string RuntimeId,
-    string DocumentToken, long Revision, bool Available = true, bool HumanEditing = false);
+    string DocumentToken, long Revision, bool Available = true, bool HumanEditing = false)
+{
+    public bool HasDocument { get; init; } = true;
+}
 
 public interface IMcpHost
 {
@@ -25,6 +28,8 @@ public sealed record RequestGuard(string RuntimeId, string DocumentToken, long? 
 
 public sealed record McpOptions
 {
+    // Opt-in: transport/grant belongs to the application runtime, not one document.
+    public bool ApplicationLifetime { get; init; }
     public bool Enabled { get; init; }
     public McpPermission Permission { get; init; } = McpPermission.ReadOnly;
     public string Transport { get; init; } = "stdioBridge";
@@ -56,7 +61,7 @@ public static class McpErrors
         HostUnavailable = "host_unavailable", TransportUnavailable = "transport_unavailable",
         StaleSession = "stale_session", StaleDocument = "stale_document",
         StaleRevision = "stale_revision", Busy = "busy", Cancelled = "cancelled",
-        Timeout = "timeout", InvalidRequest = "invalid_request",
+        NoDocument = "no_document", Timeout = "timeout", InvalidRequest = "invalid_request",
         UnsupportedCapability = "unsupported_capability", InternalError = "internal_error";
 }
 
@@ -90,6 +95,8 @@ public abstract class HostTool
     public JsonElement InputSchema { get; }
     public OperationKind Kind { get; }
     public bool Foreground { get; }
+    // Application/observation queries must explicitly opt out and enforce their own content consent.
+    public bool RequiresDocument { get; init; } = true;
     internal abstract Task<McpResult> ExecuteAsync(RequestContext context, JsonElement input, CancellationToken token);
 }
 
